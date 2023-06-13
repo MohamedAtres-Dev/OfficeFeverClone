@@ -23,9 +23,10 @@ public class CurrencyManager : Singlton<CurrencyManager>
         }
     }
 
-    private void Start()
+    protected override void Awake()
     {
-        totalCoins = PlayerPrefs.GetInt(coinsKey, 45);
+        base.Awake();
+        TotalCoins = PlayerPrefs.GetInt(coinsKey, 45);
     }
 
     /// <summary>
@@ -34,7 +35,7 @@ public class CurrencyManager : Singlton<CurrencyManager>
     /// <returns></returns>
     public int GetCoins()
     {
-        return totalCoins;
+        return TotalCoins;
     }
 
     /// <summary>
@@ -43,12 +44,12 @@ public class CurrencyManager : Singlton<CurrencyManager>
     /// <param name="value"></param>
     public void UpdateCoins(int value)
     {
-        totalCoins += value;
+        TotalCoins += value;
     }
 
     public void ResetCoins()
     {
-        totalCoins = 0;
+        TotalCoins = 0;
     }
 
     private void OnDisable()

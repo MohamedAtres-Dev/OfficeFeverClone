@@ -2,17 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PaperSenderZone : MonoBehaviour
+public class PaperSenderZone : Zone
 {
-    // Start is called before the first frame update
-    void Start()
+    public override void PerformAction(PlayerManager playerManager)
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        base.PerformAction(playerManager);
+        Debug.Log("Send Paper ");
     }
 }

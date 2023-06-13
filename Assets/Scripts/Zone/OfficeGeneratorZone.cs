@@ -81,7 +81,8 @@ public class OfficeGeneratorZone : Zone
         if (moneyPaid == officePrice)
         {
             progressImage.fillAmount = 1.0f;
-            playerManager.CreateOffice();
+            GameManager.Instance.CreateOffice(transform.position);
+            Destroy(gameObject);
             yield break;
         }
         else if (paidAmount > 0)

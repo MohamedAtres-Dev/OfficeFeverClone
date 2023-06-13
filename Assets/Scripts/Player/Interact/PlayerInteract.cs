@@ -28,7 +28,7 @@ public class PlayerInteract : MonoBehaviour
         if (interactZone != null)
         {
             interactZone.StopAction();
-
+            Debug.Log("Clear Interact ");
             interactZone = null;
         }
     }

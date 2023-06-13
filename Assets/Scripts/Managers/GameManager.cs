@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour
+public class GameManager : Singlton<GameManager>
 {
-    
+    public GameObject officeWorkerPrefab;
     void Start()
     {
 #if !UNITY_EDITOR
@@ -13,8 +13,9 @@ public class GameManager : MonoBehaviour
     }
 
     
-    void Update()
+    public void CreateOffice(Vector3 officePosition)
     {
-        
+        Vector3 newPosition = new Vector3(officePosition.x, 1f, officePosition.z);
+        Instantiate(officeWorkerPrefab, newPosition, Quaternion.identity);
     }
 }
