@@ -13,5 +13,4 @@ MonoBehaviour:
   m_Name: PlayerData
   m_EditorClassIdentifier: 
   currentPaperStackCount: 0
-  maxPaperStackCount: 0
-  playerMoney: 0
+  maxPaperStackCount: 10

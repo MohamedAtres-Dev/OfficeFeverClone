@@ -9,5 +9,5 @@ public class PlayerData : ScriptableObject
     //Hold Money and any thing relate to data of the player like upgrade stacking limit 
     public int currentPaperStackCount;
     public int maxPaperStackCount;
-    public int playerMoney;
+
 }
