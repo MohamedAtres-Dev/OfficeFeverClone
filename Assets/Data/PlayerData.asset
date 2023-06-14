@@ -12,5 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 837b0617d3d7be742aaeaa2b2e94bf47, type: 3}
   m_Name: PlayerData
   m_EditorClassIdentifier: 
-  currentPaperStackCount: 0
-  maxPaperStackCount: 10
+  currentPaperStackCount: 130
+  maxPaperStackCount: 600
+  moneyIncreaseRate: 5

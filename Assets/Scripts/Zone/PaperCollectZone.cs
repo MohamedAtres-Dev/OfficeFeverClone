@@ -8,31 +8,38 @@ public class PaperCollectZone : Zone
     public GameObject paperPrefab;
     private float spawnInterval = 0.2f;
     private float collectInterval = 0.1f;
-    private int maxGeneratedPapers = 20;
+    private int maxGeneratedPapers = 30;
     private int currentGeneratedPapers;
-    public Transform paperSpawnPoint;
-
-    private Queue<GameObject> paperQueue = new Queue<GameObject>();
-
+    public Transform[] paperSpawnPoints; // an array of 3 predefined paper spawn points
+    public float paperStackSpacing = 0.001f; // the amount of spacing between the stacked papers
+    private int[] currentTowerPapers = new int[10]; // an array to keep track of the number of papers in each tower
+    private Stack<GameObject> paperStack = new Stack<GameObject>();
+    public float yOffset = 0.2f;
     private Coroutine collectPaper;
-
+    private const float PositionTolerance = 0.001f;
     private void Start()
     {
+        currentTowerPapers = new int[paperSpawnPoints.Length];
         StartCoroutine(SpawnPapers());
     }
 
     private IEnumerator SpawnPapers()
     {
-        
+
         while (true)
         {
-            currentGeneratedPapers = paperQueue.Count;
+            currentGeneratedPapers = paperStack.Count;
             if (currentGeneratedPapers < maxGeneratedPapers)
             {
                 // Instantiate a new paper with the generated attributes
-                GameObject newPaper = Instantiate(paperPrefab, paperSpawnPoint.position, Quaternion.identity);
-                paperQueue.Enqueue(newPaper);
-            } 
+                int spawnIndex = currentGeneratedPapers % paperSpawnPoints.Length; // use modulo to cycle through the spawn points
+                Vector3 spawnPosition = paperSpawnPoints[spawnIndex].position; // get the spawn position from the chosen spawn point
+                int towerIndex = spawnIndex; // use the spawn index as the tower index
+                spawnPosition.y = paperStackSpacing * currentTowerPapers[towerIndex] + yOffset; // stack the papers on top of each other with the given spacing
+                GameObject newPaper = Instantiate(paperPrefab, spawnPosition, Quaternion.identity);
+                paperStack.Push(newPaper);
+                currentTowerPapers[towerIndex]++; // increment the number of papers in the current tower
+            }
             // Wait for the spawn interval before spawning the next paper
             yield return new WaitForSeconds(spawnInterval);
         }
@@ -43,7 +50,8 @@ public class PaperCollectZone : Zone
         base.PerformAction(playerManager);
         Debug.Log("Perform Action on Paper Zone ");
 
-        collectPaper = StartCoroutine(CollectPaper(playerManager));
+        if (collectPaper == null)
+            collectPaper = StartCoroutine(CollectPaper(playerManager));
     }
 
 
@@ -53,20 +61,34 @@ public class PaperCollectZone : Zone
         while (true)
         {
             yield return new WaitForSeconds(collectInterval);
-            if (paperQueue.Count > 0)
+            if (paperStack.Count > 0)
             {
                 playerManager.CollectPaper(1, (canCollect) =>
                 {
                     if (canCollect)
                     {
-                        // Dequeue the oldest paper from the queue and return it
-                        GameObject oldPaper = paperQueue.Dequeue();
-                        Destroy(oldPaper); //replace it with animation transfering it to the player
+                        // Pop the top paper from the queue and return it
+                        GameObject oldPaper = paperStack.Pop();
+                        Vector3 collectedPosition = oldPaper.transform.position;
+                        int towerIndex = GetTowerIndex(collectedPosition);
+                        Destroy(oldPaper);
+                        currentTowerPapers[towerIndex]--;
                     }
                 });
-               
             }
         }
+    }
+
+    private int GetTowerIndex(Vector3 position)
+    {
+        for (int i = 0; i < paperSpawnPoints.Length; i++)
+        {
+            if (Mathf.Approximately(position.x, paperSpawnPoints[i].position.x))
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 
 
@@ -74,6 +96,9 @@ public class PaperCollectZone : Zone
     {
         base.StopAction();
         if (collectPaper != null)
+        {
             StopCoroutine(collectPaper);
+            collectPaper = null;
+        }
     }
 }

@@ -22,7 +22,7 @@ public class OfficeGeneratorZone : Zone
         progressImage.fillAmount = 0f;
     }
 
-    
+
     public override void PerformAction(PlayerManager playerManager)
     {
         base.PerformAction(playerManager);
@@ -35,14 +35,16 @@ public class OfficeGeneratorZone : Zone
 
             //Withdraw the money with animation for UI 
             moneyPaid = officePrice;
-            animatePurchase = StartCoroutine(AnimatePurchase(paidAmount, playerManager));
-            //Destroy Zone
+            if (animatePurchase == null)
+                animatePurchase = StartCoroutine(AnimatePurchase(paidAmount, playerManager));
+           
             return;
         }
         else
         {
             moneyPaid += CurrencyManager.Instance.GetCoins();
-            animatePurchase = StartCoroutine(AnimatePurchase(CurrencyManager.Instance.GetCoins(), playerManager));
+            if (animatePurchase == null)
+                animatePurchase = StartCoroutine(AnimatePurchase(CurrencyManager.Instance.GetCoins(), playerManager));
             CurrencyManager.Instance.ResetCoins();
             Debug.Log("Perform Action on Office Zone - Money Paid " + moneyPaid + "rest of the money " + (officePrice - moneyPaid));
         }
@@ -95,7 +97,9 @@ public class OfficeGeneratorZone : Zone
     {
         base.StopAction();
         if (animatePurchase != null)
+        {
             StopCoroutine(animatePurchase);
-        Debug.Log("Corotine Stopped");
+            animatePurchase = null;
+        }
     }
 }

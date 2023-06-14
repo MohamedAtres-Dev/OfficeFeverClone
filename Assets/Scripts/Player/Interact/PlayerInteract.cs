@@ -6,7 +6,8 @@ using UnityEngine;
 public class PlayerInteract : MonoBehaviour
 {
     PlayerManager playerManager;
-    Zone interactZone;
+
+    List<Zone> interactZones = new List<Zone>();
 
     private void Start()
     {
@@ -16,20 +17,22 @@ public class PlayerInteract : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        interactZone = other.GetComponent<Zone>();
-        if (interactZone != null)
+        Zone zone = other.GetComponent<Zone>();
+        if (zone != null)
         {
-            interactZone.PerformAction(playerManager);
+            interactZones.Add(zone);
+            zone.PerformAction(playerManager);
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (interactZone != null)
+        Zone zone = other.GetComponent<Zone>();
+        if (zone != null && interactZones.Contains(zone))
         {
-            interactZone.StopAction();
+            interactZones.Remove(zone);
+            zone.StopAction();
             Debug.Log("Clear Interact ");
-            interactZone = null;
         }
     }
 }
