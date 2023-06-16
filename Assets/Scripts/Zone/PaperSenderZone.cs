@@ -33,7 +33,7 @@ public class PaperSenderZone : Zone
         {
             // Dequeue the oldest paper from the queue and return it
             GameObject oldPaper = paperStack.Pop();
-            Destroy(oldPaper); //replace it with animation transfering it to the player
+            oldPaper.SetActive(false);
         }
     }
 
@@ -57,15 +57,23 @@ public class PaperSenderZone : Zone
                 if (canTransfer)
                 {
                     Debug.Log("Transfer Money");
-                    GameObject newPaper = Instantiate(paperPrefab, paperSendPoint.position, Quaternion.identity);
-                    if (paperStack.Count > 0)
-                    {
-                        // Stack the new paper on top of the previous paper in the stack
-                        Vector3 previousPosition = paperStack.Peek().transform.position;
-                        newPaper.transform.position = previousPosition + new Vector3(0f, paperStackSpacing, 0f);
-                    }
-                    paperStack.Push(newPaper);
-                    onGetPaper.Invoke();
+                    playerManager.UnStackingPaper((newPaper) => {
+
+                        if(newPaper != null)
+                        {
+                            newPaper.transform.position = paperSendPoint.position;
+                            newPaper.transform.rotation = Quaternion.identity;
+                            newPaper.transform.SetParent(paperSendPoint);
+                            if (paperStack.Count > 0)
+                            {
+                                // Stack the new paper on top of the previous paper in the stack
+                                Vector3 previousPosition = paperStack.Peek().transform.position;
+                                newPaper.transform.position = previousPosition + new Vector3(0f, paperStackSpacing, 0f);
+                            }
+                            paperStack.Push(newPaper);
+                            onGetPaper.Invoke();
+                        }
+                    });
                 }
 
             });

@@ -24,8 +24,9 @@ public class MoneyCollectorZone : Zone
 
     private void OnWorkerProceedWork()
     {
-        GameObject newPaper = Instantiate(moneyPrefab, moneyGeneratePoint.position, Quaternion.identity);
-        moneyQueue.Enqueue(newPaper);
+        GameObject newMoney = Instantiate(moneyPrefab, moneyGeneratePoint.position, Quaternion.identity);
+        newMoney.transform.SetParent(transform);
+        moneyQueue.Enqueue(newMoney);
     }
 
 

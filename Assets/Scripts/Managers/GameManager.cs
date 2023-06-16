@@ -1,3 +1,4 @@
+using DG.Tweening;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +8,8 @@ using UnityEngine;
 
 public class GameManager : Singlton<GameManager>
 {
+    public AudioClip backGroundMusic;
+
     public GameObject officeWorkerPrefab;
 
     public string officeDataFileName = "officeData.dat";
@@ -17,6 +20,7 @@ public class GameManager : Singlton<GameManager>
 #if !UNITY_EDITOR
         Debug.unityLogger.logEnabled = false; //Disable any debug log for better performance
 #endif
+        AudioManager.Instance.PlayMusic(backGroundMusic);
 
         LoadOffices();
     }
@@ -50,7 +54,12 @@ public class GameManager : Singlton<GameManager>
     public void CreateOffice(Vector3 officePosition)
     {
         Vector3 newPosition = new Vector3(officePosition.x, 1f, officePosition.z);
-        Instantiate(officeWorkerPrefab, newPosition, Quaternion.identity);
+
+        GameObject newOffice = Instantiate(officeWorkerPrefab, newPosition, Quaternion.identity);
+
+        // create a scale effect using DOTween
+        newOffice.transform.localScale = Vector3.zero;
+        newOffice.transform.DOScale(Vector3.one, 0.5f).SetEase(Ease.OutElastic);
 
         // save the state of the new office object
         officeStates.Add(new OfficeState

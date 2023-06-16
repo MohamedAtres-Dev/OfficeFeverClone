@@ -9,7 +9,7 @@ using UnityEngine.Events;
 public class PlayerInput : MonoBehaviour, InputActions.IGamePlayActions
 {
     #region Events
-    public static UnityAction<Vector2> onPlayerMove = delegate { };
+    public static UnityAction<Vector2> onPlayerMoveInput = delegate { };
     #endregion
 
     #region Fields
@@ -37,7 +37,7 @@ public class PlayerInput : MonoBehaviour, InputActions.IGamePlayActions
     #region Interface Implementation
     public void OnMove(InputAction.CallbackContext context)
     {
-        onPlayerMove.Invoke(context.ReadValue<Vector2>());
+        onPlayerMoveInput.Invoke(context.ReadValue<Vector2>());
     }
     #endregion
 }
