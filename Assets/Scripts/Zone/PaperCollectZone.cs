@@ -80,8 +80,7 @@ public class PaperCollectZone : Zone
                         int towerIndex = GetTowerIndex(collectedPosition);
                         playerManager.StackingPaper(oldPaper);
 
-                        
-                        
+                        Debug.Log("Tower Index " + towerIndex);                             
                         currentTowerPapers[towerIndex]--;
                     }
                 });
@@ -91,9 +90,10 @@ public class PaperCollectZone : Zone
 
     private int GetTowerIndex(Vector3 position)
     {
+        float distanceThreshold = 0.1f; // adjust this value as needed
         for (int i = 0; i < paperSpawnPoints.Length; i++)
         {
-            if (Mathf.Approximately(position.x, paperSpawnPoints[i].position.x))
+            if (Mathf.Abs(position.x - paperSpawnPoints[i].position.x) < distanceThreshold)
             {
                 return i;
             }

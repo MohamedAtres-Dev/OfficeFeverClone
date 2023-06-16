@@ -7,7 +7,7 @@ using DG.Tweening;
 
 public class OfficeGeneratorZone : Zone
 {
-    [SerializeField] private int officePrice = 100;
+    [SerializeField] public int officePrice = 100;
     private int moneyPaid = 0;
     private float fillingTime = 0.2f;
     private Coroutine animatePurchase;
@@ -83,8 +83,8 @@ public class OfficeGeneratorZone : Zone
         if (moneyPaid == officePrice)
         {
             progressImage.fillAmount = 1.0f;
-            GameManager.Instance.CreateOffice(transform.position);
-            Destroy(gameObject);
+            OfficeFactory.Instance.CreateOffice(transform);
+            //Destroy(gameObject);
             yield break;
         }
         else if (paidAmount > 0)
