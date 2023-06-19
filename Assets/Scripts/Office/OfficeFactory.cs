@@ -112,6 +112,8 @@ public class OfficeFactory : Singlton<OfficeFactory>
         GameObject newOffice = Instantiate(officePrefab, spawnPos.position, spawnPos.rotation, officesParent);
         newOffice.GetComponent<Office>().UIObject.SetActive(false);
         newOffice.GetComponent<Office>().officeWorker.SetActive(true);
+
+        
         // Set office state
         officeStates.Add(new OfficeState
         {

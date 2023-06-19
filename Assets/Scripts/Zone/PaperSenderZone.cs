@@ -33,7 +33,7 @@ public class PaperSenderZone : Zone
         {
             // Dequeue the oldest paper from the queue and return it
             GameObject oldPaper = paperStack.Pop();
-            oldPaper.SetActive(false);
+            PoolManager.Instance.ReturnObjectToPool(ObjectPoolTypes.PAPER, oldPaper);
         }
     }
 

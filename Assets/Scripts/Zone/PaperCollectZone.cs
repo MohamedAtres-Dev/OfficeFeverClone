@@ -9,7 +9,6 @@ public class PaperCollectZone : Zone
     private float spawnInterval = 0.2f;
     private float collectInterval = 0.1f;
     private int maxGeneratedPapers = 30;
-    private PaperPool paperPool;
 
     private int currentGeneratedPapers;
     public Transform[] paperSpawnPoints; // an array of 3 predefined paper spawn points
@@ -23,7 +22,6 @@ public class PaperCollectZone : Zone
     private void Start()
     {
         currentTowerPapers = new int[paperSpawnPoints.Length];
-        this.paperPool = new PaperPool(paperPrefab, maxGeneratedPapers , transform);
         StartCoroutine(SpawnPapers());
     }
 
@@ -40,7 +38,7 @@ public class PaperCollectZone : Zone
                 Vector3 spawnPosition = paperSpawnPoints[spawnIndex].position; // get the spawn position from the chosen spawn point
                 int towerIndex = spawnIndex; // use the spawn index as the tower index
                 spawnPosition.y = paperStackSpacing * currentTowerPapers[towerIndex] + yOffset; // stack the papers on top of each other with the given spacing
-                GameObject newPaper = paperPool.GetObject();
+                GameObject newPaper = PoolManager.Instance.GetObjectFromPool(ObjectPoolTypes.PAPER);
                 newPaper.transform.position = spawnPosition;
                 newPaper.transform.rotation = Quaternion.identity;
                 newPaper.transform.SetParent(transform);
@@ -55,7 +53,6 @@ public class PaperCollectZone : Zone
     public override void PerformAction(PlayerManager playerManager)
     {
         base.PerformAction(playerManager);
-        Debug.Log("Perform Action on Paper Zone ");
 
         if (collectPaper == null)
             collectPaper = StartCoroutine(CollectPaper(playerManager));
@@ -80,7 +77,7 @@ public class PaperCollectZone : Zone
                         int towerIndex = GetTowerIndex(collectedPosition);
                         playerManager.StackingPaper(oldPaper);
 
-                        Debug.Log("Tower Index " + towerIndex);                             
+                                            
                         currentTowerPapers[towerIndex]--;
                     }
                 });

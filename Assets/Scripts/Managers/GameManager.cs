@@ -10,6 +10,9 @@ public class GameManager : Singlton<GameManager>
 {
     public AudioClip backGroundMusic;
 
+
+
+
     void Start()
     {
 #if !UNITY_EDITOR

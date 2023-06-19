@@ -15,10 +15,13 @@ public class PlayerManager : MonoBehaviour
     public Transform holdPaperPoint;
 
     [Header("Sound")]
-    [SerializeField] private AudioClip coinSound; 
+    [SerializeField] private AudioClip coinSound;
     private bool isPaperHanging;
     public static UnityAction<bool> onHangingPaper = delegate { };
     private Stack<GameObject> paperStack = new Stack<GameObject>();
+
+    [Space]
+    public GameObject maxStackText;
 
     private void Update()
     {
@@ -42,6 +45,8 @@ public class PlayerManager : MonoBehaviour
     {
         if (playerData.currentPaperStackCount >= playerData.maxPaperStackCount)
         {
+            if (!maxStackText.activeSelf)
+                maxStackText.SetActive(true);
             callback.Invoke(false);
             return;
         }
@@ -76,6 +81,10 @@ public class PlayerManager : MonoBehaviour
             callback.Invoke(false);
             return;
         }
+
+        if (maxStackText.activeSelf)
+            maxStackText.SetActive(false);
+
         callback.Invoke(true);
         playerData.currentPaperStackCount--;
     }
@@ -91,7 +100,7 @@ public class PlayerManager : MonoBehaviour
 
         paper.transform.position = holdPaperPoint.position;
 
-        paper.transform.SetParent(holdPaperPoint );
+        paper.transform.SetParent(holdPaperPoint);
 
         if (paperStack.Count > 0)
         {
@@ -123,15 +132,6 @@ public class PlayerManager : MonoBehaviour
             // get the top paper in the stack
             GameObject topPaper = paperStack.Pop();
             onPaperUnstack?.Invoke(topPaper);
-            // move the paper to the new position
-            //topPaper.transform.position = newPaperPoint.transform.position;
-
-            // update the position of the remaining papers in the stack
-            //foreach (GameObject paper in paperStack)
-            //{
-            //    Vector3 newPosition = paper.transform.position - new Vector3(0f, topPaper.transform.lossyScale.y, 0f);
-            //    paper.transform.position = newPosition;
-            //}
         }
     }
 }
