@@ -273,7 +273,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UIObject: {fileID: 2455313286137671688}
-  officeWorker: {fileID: 2729856868060396778}
+  officeWorker: {fileID: 2729856868060396772}
+  moneyCollector: {fileID: 2729856868974044805}
+  paperSender: {fileID: 2729856867788330349}
+  officeGenerator: {fileID: 2455313286137671694}
 --- !u!1 &2455313286137671688
 GameObject:
   m_ObjectHideFlags: 0
@@ -286,7 +289,7 @@ GameObject:
   - component: {fileID: 2455313286137671695}
   - component: {fileID: 2455313286137671694}
   m_Layer: 5
-  m_Name: 'UI '
+  m_Name: OfficeGeneratorZone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -340,9 +343,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70cc43bf3382d544b914ef3a7debfe24, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  officePrice: 600
   priceText: {fileID: 2455313286557676931}
   progressImage: {fileID: 2455313285786042875}
+  myOffice: {fileID: 2894692949016700728}
 --- !u!1 &2455313286557676989
 GameObject:
   m_ObjectHideFlags: 0
@@ -492,7 +495,7 @@ GameObject:
   - component: {fileID: 2729856867788330348}
   - component: {fileID: 2729856867788330349}
   m_Layer: 0
-  m_Name: DropPaperZones
+  m_Name: PaperSenderZone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -726,7 +729,7 @@ GameObject:
   - component: {fileID: 2729856868974044804}
   - component: {fileID: 2729856868974044805}
   m_Layer: 0
-  m_Name: MoneyZone
+  m_Name: MoneyCollectorZone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -973,7 +976,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4578191426407268929}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.32, y: 0.981, z: 0}
+  m_LocalPosition: {x: -0.32, y: 1.03, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

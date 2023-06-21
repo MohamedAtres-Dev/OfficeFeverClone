@@ -7,6 +7,7 @@ public class CameraFollow : MonoBehaviour
     public Transform playerTransform; // The transform of the player to follow
     public float followSpeed = 10f; // The speed at which the camera should follow the player
     public Vector3 offset = new Vector3(0f, 2f, -10f); // The offset from the player's position 
+
     private void LateUpdate()
     {
         // If the player transform is null, exit early

@@ -22,6 +22,14 @@ public class MoneyCollectorZone : Zone
         OfficeWorker.onProceedWork -= OnWorkerProceedWork;
     }
 
+    public void GenerateInitialMoney(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            OnWorkerProceedWork();
+        }
+    }
+
     private void OnWorkerProceedWork()
     {
         GameObject newMoney = Instantiate(moneyPrefab, moneyGeneratePoint.position, Quaternion.identity);
@@ -62,5 +70,10 @@ public class MoneyCollectorZone : Zone
             StopCoroutine(collectMoneyCoroutine);
             collectMoneyCoroutine = null;
         }
+    }
+
+    public int GetMoneyGeneratedCount()
+    {
+        return moneyQueue.Count;
     }
 }

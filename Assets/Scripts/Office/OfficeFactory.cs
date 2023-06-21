@@ -8,13 +8,15 @@ using UnityEngine;
 
 public class OfficeFactory : Singlton<OfficeFactory>
 {
-    public GameObject officePrefab;
+    public OfficeSettings officeSettings;
+
+    public Office officePrefab;
     public Transform officesParent;
     public Transform[] spawnPoints;
 
     public string officeDataFileName = "office.dat";
-    private List<OfficeState> officeStates = new List<OfficeState>();
-
+    private Offices offices = new Offices();
+    private List<Office> allOfficesPrefabs = new List<Office>();
     private void Start()
     {
         LoadOffices();
@@ -26,124 +28,139 @@ public class OfficeFactory : Singlton<OfficeFactory>
         try
         {
             FileStream stream = new FileStream(Application.persistentDataPath + "/" + officeDataFileName, FileMode.Open);
-            officeStates = (List<OfficeState>)formatter.Deserialize(stream);
+            offices = (Offices)formatter.Deserialize(stream);
             stream.Close();
 
-            for (int i = 0; i < officeStates.Count; i++)
+            foreach (var office in offices.allOffices)
             {
-                if (officeStates[i].isGenerated)
-                {
-                    // Generate office at saved position
-                    GenerateOffice(i, false, officeStates[i].position.ToVector3(), officeStates[i].rotation.ToQuaternion());
-                }
-                else
-                {
-                    // Show UI and generate new office at random spawn point
-                    GenerateOffice(i, true);
-                }
+                // Generate office at saved position
+                GenerateOffice(office.Key, office.Value);
             }
         }
         catch (SerializationException e)
         {
             Debug.LogError("Failed to deserialize office data: " + e.Message);
-            officeStates.Clear();
+            offices.allOffices.Clear();
         }
         catch (FileNotFoundException)
         {
             Debug.Log("No saved office data found.");
-            GenerateDefaultOffice();
             //Generate Default One
-            for (int i = 1; i < spawnPoints.Length; i++)
+            for (int i = 0; i < spawnPoints.Length; i++)
             {
-                officeStates.Add(new OfficeState());
-                GenerateOffice(i, true);
+                var officeState = new OfficeState();
+                offices.allOffices.Add(i, officeState);
+                if(i == 0)
+                {
+                    officeState.isGenerated = true;
+                }
+                officeState.officePrice = officeSettings.GetRandomPrice();
+                GenerateOffice(i, officeState);
             }
-            
+
         }
     }
 
 
-    private void GenerateDefaultOffice()
+    /// <summary>
+    /// I will Generate the offices at the begining of the game when loading the game.
+    /// </summary>
+    /// <param name="index"></param>
+    /// <param name="isGenereted"></param>
+    /// <param name="position"></param>
+    /// <param name="rotation"></param>
+    /// <param name="generatedMoney"></param>
+    /// <param name="numOfWaitingPaper"></param>
+    /// <param name="officePrice"></param>
+    private void GenerateOffice(int index, OfficeState officeState)
     {
-        CreateOffice(spawnPoints[0]);
-
-    }
-
-    private void GenerateOffice(int index, bool showUi, Vector3? position = null, Quaternion? rotation = null)
-    {
-        GameObject newOffice = Instantiate(officePrefab, spawnPoints[index].position, spawnPoints[index].rotation, officesParent);
-
-        // Set office position and rotation
-        if (position.HasValue)
-        {
-            newOffice.transform.position = position.Value;
-        }
-        if (rotation.HasValue)
-        {
-            newOffice.transform.rotation = rotation.Value;
-        }
+        Office newOffice = Instantiate(officePrefab, spawnPoints[index].position, spawnPoints[index].rotation, officesParent);
+        officeState.officeId = index;
 
         // Show or hide UI
-        if (showUi)
+        if (officeState.isGenerated)
         {
-            // TODO: Show UI for new office
-            newOffice.GetComponent<Office>().UIObject.SetActive(true);
-            newOffice.GetComponent<Office>().officeWorker.SetActive(false);
+            // TODO: Hide UI for existing office
+            newOffice.UIObject.SetActive(false);
+            newOffice.officeWorker.gameObject.SetActive(true);
+            newOffice.GenerateMoney(officeState.generatedMoney);
+            newOffice.GeneratePaper(officeState.numOfWaitingPaper);
         }
         else
         {
-            // TODO: Hide UI for existing office
-            newOffice.GetComponent<Office>().UIObject.SetActive(false);
-            newOffice.GetComponent<Office>().officeWorker.SetActive(true);
+            // TODO: Show UI for new office
+            newOffice.UIObject.SetActive(true);
+            newOffice.officeWorker.gameObject.SetActive(false);
+            newOffice.SetOfficePrice(officeState.officePrice , officeState.moneyPaid);
+            offices.allOffices[index].officePrice = officeState.officePrice;
         }
-
-        if (officeStates.Count > 0)
-        {
-            // Set office state
-            officeStates[index].isGenerated = !showUi;
-            officeStates[index].position = new SerializableVector3(newOffice.transform.position);
-            officeStates[index].rotation = new SerializableQuaternion(newOffice.transform.rotation);
-        }
-
+        newOffice.SetOfficeState(officeState);
+        allOfficesPrefabs.Add(newOffice);
     }
 
-    public void CreateOffice(Transform spawnPos)
+    /// <summary>
+    /// To Create new office this will be called from outside
+    /// </summary>
+    /// <param name="spawnPos"></param>
+    public void CreateOffice(Office office)
     {
-        GameObject newOffice = Instantiate(officePrefab, spawnPos.position, spawnPos.rotation, officesParent);
-        newOffice.GetComponent<Office>().UIObject.SetActive(false);
-        newOffice.GetComponent<Office>().officeWorker.SetActive(true);
+        office.UIObject.SetActive(false);
+        office.officeWorker.gameObject.SetActive(true);
 
-        
-        // Set office state
-        officeStates.Add(new OfficeState
+        if (offices.allOffices.ContainsKey(office.GetOfficeId()))
+            offices.allOffices[office.GetOfficeId()].isGenerated = true;
+        else
         {
-            isGenerated = true,
-            position = new SerializableVector3(newOffice.transform.position),
-            rotation = new SerializableQuaternion(newOffice.transform.rotation)
-        });
+            OfficeState newOffice = new OfficeState()
+            {
+                officeId = offices.allOffices.Count,
+                isGenerated = true,
+                position = new SerializableVector3(office.transform.position),
+                rotation = new SerializableQuaternion(office.transform.rotation)
+            };
+
+            offices.allOffices.Add(offices.allOffices.Count, newOffice);
+        }    
         SaveOffices();
     }
+
 
     private void SaveOffices()
     {
         BinaryFormatter formatter = new BinaryFormatter();
         FileStream stream = new FileStream(Application.persistentDataPath + "/" + officeDataFileName, FileMode.Create);
-        formatter.Serialize(stream, officeStates);
+        formatter.Serialize(stream, offices);
         stream.Close();
     }
 
-
     private void OnDisable()
     {
+        foreach (var item in allOfficesPrefabs)
+        {
+            offices.allOffices[item.GetOfficeId()].moneyPaid = item.GetMoneyPaid();
+            offices.allOffices[item.GetOfficeId()].generatedMoney = item.GetMoneyGeneratedCount();
+            offices.allOffices[item.GetOfficeId()].numOfWaitingPaper = item.GetPaperCount();
+        }
         SaveOffices();
     }
 }
 
+[Serializable]
+public class Offices
+{
+    public GenericDictionary<int, OfficeState> allOffices = new GenericDictionary<int, OfficeState>();
+}
 
 [Serializable]
 public class OfficeState
 {
+    public int officeId;
     public bool isGenerated;
+    public int officePrice;
+    public int generatedMoney;
+    public int numOfWaitingPaper;
+    public bool isWorking;
+    public int moneyPaid;
     public SerializableVector3 position;
     public SerializableQuaternion rotation;
 }

@@ -1,3 +1,4 @@
+using Lean.Gui;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -40,11 +41,13 @@ public class PlayerMovement : MonoBehaviour
     private void OnEnable()
     {
         PlayerInput.onPlayerMoveInput += OnGetPlayerMoveInput;
+        LeanJoystick.onJoystickMove += OnGetPlayerMoveInput;
     }
 
     private void OnDisable()
     {
         PlayerInput.onPlayerMoveInput -= OnGetPlayerMoveInput;
+        LeanJoystick.onJoystickMove -= OnGetPlayerMoveInput;
     }
 
     private void Update()
@@ -110,9 +113,8 @@ public class PlayerMovement : MonoBehaviour
     }
     #endregion
 
-    private void OnGetPlayerMoveInput(Vector2 move)
+    public void OnGetPlayerMoveInput(Vector2 move)
     {
-        Debug.Log("Move " + move);
         _inputVector = move;
     }
 }

@@ -25,6 +25,12 @@ public class OfficeWorker : MonoBehaviour
     {
         workCoroutine = StartCoroutine(Working());
     }
+
+    public int GetpaperCount()
+    {
+        return currentPaperAmount;
+    }
+
     private void OnGetpaper()
     {
         currentPaperAmount++;

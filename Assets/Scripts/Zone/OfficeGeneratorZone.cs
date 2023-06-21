@@ -7,7 +7,7 @@ using DG.Tweening;
 
 public class OfficeGeneratorZone : Zone
 {
-    [SerializeField] public int officePrice = 100;
+    private int officePrice = 100;
     private int moneyPaid = 0;
     private float fillingTime = 0.2f;
     private Coroutine animatePurchase;
@@ -16,10 +16,15 @@ public class OfficeGeneratorZone : Zone
     public TextMeshProUGUI priceText;
     public Image progressImage;
 
+    public Office myOffice;
+
+    public int OfficePrice { get => officePrice; set => officePrice = value; }
+    public int MoneyPaid { get => moneyPaid; set => moneyPaid = value; }
+
     private void Start()
     {
-        priceText.text = officePrice.ToString();
-        progressImage.fillAmount = 0f;
+        priceText.text = MathHelper.FormatNumber(officePrice - moneyPaid);
+        progressImage.fillAmount = (float)moneyPaid / (float)officePrice;
     }
 
 
@@ -60,10 +65,10 @@ public class OfficeGeneratorZone : Zone
 
         Debug.Log("The Remaing amount " + remainingAmount);
         // Animate the price text from the full price to the remaining amount
-        priceText.text = (officePrice - moneyPaid).ToString();
+        priceText.text = MathHelper.FormatNumber(officePrice - moneyPaid);
         priceText.transform.DOScale(1.2f, 0.2f).SetLoops(2, LoopType.Yoyo);
 
-        DOTween.To(() => int.Parse(priceText.text), x => priceText.text = x.ToString(), remainingAmount, fillingTime).SetEase(Ease.Linear);
+        DOTween.To(() => MathHelper.ParseFormattedNumber(priceText.text), x => priceText.text = MathHelper.FormatNumber(x), remainingAmount, fillingTime).SetEase(Ease.Linear);
 
 
         // Calculate the fill amount based on the paid amount
@@ -83,14 +88,18 @@ public class OfficeGeneratorZone : Zone
         if (moneyPaid == officePrice)
         {
             progressImage.fillAmount = 1.0f;
-            OfficeFactory.Instance.CreateOffice(transform);
-            //Destroy(gameObject);
+            myOffice.CreateOffice();
             yield break;
         }
         else if (paidAmount > 0)
         {
             progressImage.fillAmount = fillAmount;
         }
+    }
+
+    public int GetMoneyPaid()
+    {
+        return moneyPaid;
     }
 
     public override void StopAction()

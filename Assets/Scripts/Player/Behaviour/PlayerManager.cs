@@ -16,12 +16,36 @@ public class PlayerManager : MonoBehaviour
 
     [Header("Sound")]
     [SerializeField] private AudioClip coinSound;
+    [SerializeField] private AudioClip paperSound;
+
+
     private bool isPaperHanging;
     public static UnityAction<bool> onHangingPaper = delegate { };
     private Stack<GameObject> paperStack = new Stack<GameObject>();
 
     [Space]
     public GameObject maxStackText;
+    private void OnEnable()
+    {
+        SpawnManager.onInstantiatingPools += GeneratePaperStacking;
+    }
+
+    private void OnDisable()
+    {
+        SpawnManager.onInstantiatingPools -= GeneratePaperStacking;
+    }
+
+
+    private void GeneratePaperStacking()
+    {
+        if(playerData.currentPaperStackCount > 0)
+        {
+            for (int i = 0; i < playerData.currentPaperStackCount; i++)
+            {
+                StackingPaper(PoolManager.Instance.GetObjectFromPool(ObjectPoolTypes.PAPER));
+            }
+        }
+    }
 
     private void Update()
     {
@@ -45,6 +69,7 @@ public class PlayerManager : MonoBehaviour
     {
         if (playerData.currentPaperStackCount >= playerData.maxPaperStackCount)
         {
+            Debug.Log("Can't Collect ");
             if (!maxStackText.activeSelf)
                 maxStackText.SetActive(true);
             callback.Invoke(false);
@@ -92,45 +117,55 @@ public class PlayerManager : MonoBehaviour
 
     public void StackingPaper(GameObject paper)
     {
-        if (playerData.currentPaperStackCount >= playerData.maxPaperStackCount)
+        if (playerData.currentPaperStackCount > playerData.maxPaperStackCount)
         {
             Debug.Log("Max Stack ");
             return;
         }
 
-        paper.transform.position = holdPaperPoint.position;
-
-        paper.transform.SetParent(holdPaperPoint);
-
-        if (paperStack.Count > 0)
+        AudioManager.Instance.PlaySFX(paperSound);
+        paper.transform.DOMove(holdPaperPoint.position, 0.3f).OnComplete(() =>
         {
-            // get the top paper in the stack
-            GameObject topPaper = paperStack.Peek();
 
-            // calculate the position for the new paper based on the position and size of the top paper
-            Vector3 newPosition = topPaper.transform.position + new Vector3(0f, topPaper.transform.lossyScale.y, 0f);
+            // Animation is complete, do any additional actions here
+            paper.transform.SetParent(holdPaperPoint);
 
-            // set the position of the new paper and add it to the stack
-            paper.transform.position = newPosition;
+            if (paperStack.Count > 0)
+            {
+                // get the top paper in the stack
+                GameObject topPaper = paperStack.Peek();
 
-            // keep the rotation of the new paper constant
-            paper.transform.rotation = Quaternion.AngleAxis(topPaper.transform.eulerAngles.y, Vector3.up);
+                // calculate the position for the new paper based on the position and size of the top paper
+                Vector3 newPosition = topPaper.transform.position + new Vector3(0f, topPaper.transform.lossyScale.y, 0f);
 
-            paperStack.Push(paper);
-        }
-        else
-        {
-            // if the stack is empty, just add the paper at the player holder point
-            paperStack.Push(paper);
-        }
+                // set the position of the new paper and add it to the stack
+                paper.transform.position = newPosition;
+
+                // keep the rotation of the new paper constant
+                paper.transform.rotation = Quaternion.AngleAxis(topPaper.transform.eulerAngles.y, Vector3.up);
+
+                paperStack.Push(paper);
+            }
+            else
+            {
+
+                // if the stack is empty, just add the paper at the player holder point
+                paperStack.Push(paper);
+            }
+        });
+        //paper.transform.position = holdPaperPoint.position;
+
+       
     }
 
     public void UnStackingPaper(Action<GameObject> onPaperUnstack)
     {
         if (paperStack.Count > 0)
         {
+            Debug.Log("UnStacking Papaer");
             // get the top paper in the stack
             GameObject topPaper = paperStack.Pop();
+            AudioManager.Instance.PlaySFX(paperSound);
             onPaperUnstack?.Invoke(topPaper);
         }
     }

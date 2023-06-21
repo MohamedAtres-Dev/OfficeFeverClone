@@ -22,6 +22,20 @@ public class PaperCollectZone : Zone
     private void Start()
     {
         currentTowerPapers = new int[paperSpawnPoints.Length];
+    }
+
+    private void OnEnable()
+    {
+        SpawnManager.onInstantiatingPools += StartSpawnPapers;
+    }
+
+    private void OnDisable()
+    {
+        SpawnManager.onInstantiatingPools -= StartSpawnPapers;
+    }
+
+    private void StartSpawnPapers()
+    {
         StartCoroutine(SpawnPapers());
     }
 
