@@ -40,11 +40,17 @@ public class GenericDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ISeria
     // Since lists can be serialized natively by unity no custom implementation is needed
     public void OnBeforeSerialize() { }
 
+    // Rebuild the lookup dictionaries after BinaryFormatter deserialization (save files).
+    [System.Runtime.Serialization.OnDeserialized]
+    void OnDeserializedCallback(System.Runtime.Serialization.StreamingContext context) => OnAfterDeserialize();
+
     // Fill dictionary with list pairs and flag key-collisions.
     public void OnAfterDeserialize()
     {
-        dict.Clear();
-        indexByKey.Clear();
+        // BinaryFormatter skips field initializers and [NonSerialized] fields, so they can be null here.
+        dict = new Dictionary<TKey, TValue>();
+        indexByKey = new Dictionary<TKey, int>();
+        list ??= new List<KeyValuePair>();
         keyCollision = false;
 
         for (int i = 0; i < list.Count; i++)
