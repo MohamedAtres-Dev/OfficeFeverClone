@@ -8,24 +8,24 @@ using DG.Tweening;
 public class PaperSenderZone : Zone
 {
     private float sendInterval = 0.05f;
-    private Stack<GameObject> paperStack = new Stack<GameObject>();
+    public Stack<GameObject> paperStack = new Stack<GameObject>();
     private Coroutine sendPaper;
     private int currentSendPaper;
     public Transform paperSendPoint;
     public GameObject paperPrefab;
     public float paperStackSpacing = 0.02f; // the amount of spacing between the stacked papers
 
-    //Here I send Paper to worker
-    public static UnityAction onGetPaper = delegate { };
+    public Office currentOffice;
+
 
     private void OnEnable()
     {
-        OfficeWorker.onProceedWork += OnWorkerProceedWork;
+       
     }
 
     private void OnDisable()
     {
-        OfficeWorker.onProceedWork -= OnWorkerProceedWork;
+        
     }
 
     public void GenerateInitialPapers(int paperCount)
@@ -45,12 +45,13 @@ public class PaperSenderZone : Zone
                     newPaper.transform.position = previousPosition + new Vector3(0f, paperStackSpacing, 0f);
                 }
                 paperStack.Push(newPaper);
-                onGetPaper.Invoke();
+                currentOffice.OnGetPaper();
+               
             }
         }
     }
 
-    private void OnWorkerProceedWork()
+    public void OnWorkerProceedWork(OfficeWorker worker)
     {
         if (paperStack.Count > 0)
         {
@@ -93,7 +94,7 @@ public class PaperSenderZone : Zone
                                     newPaper.transform.position = previousPosition + new Vector3(0f, paperStackSpacing, 0f);
                                 }
                                 paperStack.Push(newPaper);
-                                onGetPaper.Invoke();
+                                currentOffice.OnGetPaper();
                             });                        
                         }
                     });

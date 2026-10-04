@@ -570,6 +570,7 @@ MonoBehaviour:
   paperSendPoint: {fileID: 4408300661417696227}
   paperPrefab: {fileID: 173662686794936808, guid: 621a4107b4591ed42afa6a6f632c7c5c, type: 3}
   paperStackSpacing: 0.02
+  currentOffice: {fileID: 2894692949016700728}
 --- !u!1 &2729856868060396778
 GameObject:
   m_ObjectHideFlags: 0
@@ -616,6 +617,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4eaf13ebc7ca284ebf8a6d02a19f485, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  currentOffice: {fileID: 2894692949016700728}
 --- !u!1 &2729856868871168971
 GameObject:
   m_ObjectHideFlags: 0
@@ -775,7 +777,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26c6c01d57085ea40aa1524ae47c61dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moneyPrefab: {fileID: 1842476033063464918, guid: ef8fe173704bdff45bbfd650a100343d, type: 3}
+  moneyPrefab: {fileID: 6907262025351723356, guid: 567aa56b16296c34e8dce48f43f314a9, type: 3}
   moneyGeneratePoint: {fileID: 6182836253448323983}
 --- !u!1 &3369185449014131989
 GameObject:

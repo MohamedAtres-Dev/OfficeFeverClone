@@ -64,4 +64,17 @@ public class Office : MonoBehaviour
     }
 
 
+
+
+
+    public void OnProceedWork()
+    {
+        moneyCollector.OnWorkerProceedWork(officeWorker);
+        paperSender.OnWorkerProceedWork(officeWorker);
+    }
+
+    public void OnGetPaper()
+    {
+        officeWorker.OnGetpaper();
+    }
 }

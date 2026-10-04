@@ -17,11 +17,18 @@ public class AudioManager : Singlton<AudioManager>
 
     private List<AudioSource> pool = new List<AudioSource>();
 
+    public bool GetSFXState()
+    {
+        return PlayerPrefs.GetInt("SFXVolume", 1) == 0 ? false : true;
+    }
+
+    public bool GetMusicState()
+    {
+        return PlayerPrefs.GetInt("MusicVolume", 1) == 0 ? false : true;
+    }
+
     protected override void Awake()
     {
-        base.Awake();
-
-
         musicSource = gameObject.AddComponent<AudioSource>();
         musicSource.outputAudioMixerGroup = musicGroup;
         musicSource.loop = true;
@@ -31,7 +38,17 @@ public class AudioManager : Singlton<AudioManager>
             AudioSource audioSource = CreateAudioSource();
             pool.Add(audioSource);
         }
+
+
+
     }
+
+    private void Start()
+    {
+        SetSFXVolume(GetSFXState() == true ? 1 : 0);
+        SetMusicVolume(GetMusicState() == true ? 1 : 0);
+    }
+
 
     public void PlayMusic(AudioClip clip, float volume = 1f)
     {
@@ -48,11 +65,16 @@ public class AudioManager : Singlton<AudioManager>
     public void SetSFXVolume(float volume)
     {
         audioMixer.SetFloat("SFXVolume", Mathf.Log10(volume) * 20);
+        Debug.Log("Set Sound " + Mathf.Log10(volume) * 20);
+
+        PlayerPrefs.SetInt("SFXVolume", volume == 1 ? 1 : 0);
     }
 
     public void SetMusicVolume(float volume)
     {
         audioMixer.SetFloat("MusicVolume", Mathf.Log10(volume) * 20);
+        Debug.Log("Set Music " + Mathf.Log10(volume) * 20);
+        PlayerPrefs.SetInt("MusicVolume", volume == 1 ? 1 : 0);
     }
 
     public void PauseMusic()

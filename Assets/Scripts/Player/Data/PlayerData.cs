@@ -10,5 +10,5 @@ public class PlayerData : ScriptableObject
     public int currentPaperStackCount;
     public int maxPaperStackCount;
 
-    public int moneyIncreaseRate = 5;
+    public int moneyIncreaseRate = 5;  
 }

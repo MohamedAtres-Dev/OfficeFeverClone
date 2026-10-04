@@ -13,9 +13,9 @@ public class GenericDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ISeria
     // Internal
     [SerializeField]
     List<KeyValuePair> list = new List<KeyValuePair>();
-    [SerializeField]
+    [NonSerialized]
     Dictionary<TKey, int> indexByKey = new Dictionary<TKey, int>();
-    [SerializeField, HideInInspector]
+    [NonSerialized]
     Dictionary<TKey, TValue> dict = new Dictionary<TKey, TValue>();
 
 #pragma warning disable 0414

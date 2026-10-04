@@ -19,8 +19,6 @@ public class GameManager : Singlton<GameManager>
         Debug.unityLogger.logEnabled = false; //Disable any debug log for better performance
 #endif
         AudioManager.Instance.PlayMusic(backGroundMusic);
-
-
     }
 
 

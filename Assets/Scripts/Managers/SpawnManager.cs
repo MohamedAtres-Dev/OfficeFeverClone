@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-public class SpawnManager : MonoBehaviour
+public class SpawnManager : Singlton<SpawnManager>
 {
     [Header("Paper")]
     [SerializeField] private GameObject paperPrefab;
@@ -17,8 +17,9 @@ public class SpawnManager : MonoBehaviour
     public static UnityAction onInstantiatingPools = delegate { };
 
     // Start is called before the first frame update
-    void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         PoolManager.Instance.InstantiatePool(ObjectPoolTypes.PAPER, paperPrefab, paperPoolSize);
         PoolManager.Instance.InstantiatePool(ObjectPoolTypes.MONEY, moneyPrefab, moneyPoolSize);
         onInstantiatingPools.Invoke();

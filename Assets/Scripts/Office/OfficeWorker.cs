@@ -9,16 +9,18 @@ public class OfficeWorker : MonoBehaviour
     private Coroutine workCoroutine;
     private float workInterval = 0.4f; //I can make settings in scriptable object so i can control this variable from other places like upgrade the work to speed him up
     private int currentPaperAmount;
+    public Office currentOffice;
 
-    public static UnityAction onProceedWork = delegate { };
+
+    //make the office be the coordinator between these classes 
     private void OnEnable()
     {
-        PaperSenderZone.onGetPaper += OnGetpaper;
+        
     }
 
     private void OnDisable()
     {
-        PaperSenderZone.onGetPaper -= OnGetpaper;
+       
     }
 
     private void Start()
@@ -31,7 +33,7 @@ public class OfficeWorker : MonoBehaviour
         return currentPaperAmount;
     }
 
-    private void OnGetpaper()
+    public void OnGetpaper()
     {
         currentPaperAmount++;
 
@@ -57,8 +59,9 @@ public class OfficeWorker : MonoBehaviour
             }
             else
             {
+                currentOffice.OnProceedWork();
                 //Proceed Money 
-                onProceedWork.Invoke();
+                //onProceedWork.Invoke(this);
                 currentPaperAmount--;
             }
         }
