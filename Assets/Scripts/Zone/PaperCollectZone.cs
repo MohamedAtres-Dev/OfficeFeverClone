@@ -17,31 +17,51 @@ public class PaperCollectZone : Zone
     private Stack<GameObject> paperStack = new Stack<GameObject>();
     public float yOffset = 0.2f;
     private Coroutine collectPaper;
-    
+    private Coroutine spawnPapers;
 
-    private void Start()
+
+    // Awake (not Start) so the tower counters exist before the first paper can be spawned.
+    private void Awake()
     {
-        currentTowerPapers = new int[paperSpawnPoints.Length];
+        int towers = paperSpawnPoints != null ? paperSpawnPoints.Length : 0;
+        currentTowerPapers = new int[Mathf.Max(1, towers)];
     }
 
     private void OnEnable()
     {
         SpawnManager.onInstantiatingPools += StartSpawnPapers;
+        // The pools may already be ready if this zone is enabled after SpawnManager.Start.
+        if (SpawnManager.PoolsReady)
+            StartSpawnPapers();
     }
 
     private void OnDisable()
     {
         SpawnManager.onInstantiatingPools -= StartSpawnPapers;
+
+        // Disabling only the component does not stop its coroutines, so stop them and clear the handles
+        // to make sure the zone can start cleanly again when it is re-enabled.
+        StopAllCoroutines();
+        spawnPapers = null;
+        collectPaper = null;
     }
 
     private void StartSpawnPapers()
     {
-        StartCoroutine(SpawnPapers());
+        if (spawnPapers == null)
+            spawnPapers = StartCoroutine(SpawnPapers());
     }
 
     private IEnumerator SpawnPapers()
     {
+        if (paperSpawnPoints == null || paperSpawnPoints.Length == 0)
+        {
+            Debug.LogError("PaperCollectZone has no paper spawn points assigned.", this);
+            spawnPapers = null;
+            yield break;
+        }
 
+        var wait = new WaitForSeconds(spawnInterval);
         while (true)
         {
             currentGeneratedPapers = paperStack.Count;
@@ -49,18 +69,22 @@ public class PaperCollectZone : Zone
             {
                 // Instantiate a new paper with the generated attributes
                 int spawnIndex = currentGeneratedPapers % paperSpawnPoints.Length; // use modulo to cycle through the spawn points
-                Vector3 spawnPosition = paperSpawnPoints[spawnIndex].position; // get the spawn position from the chosen spawn point
-                int towerIndex = spawnIndex; // use the spawn index as the tower index
-                spawnPosition.y = paperStackSpacing * currentTowerPapers[towerIndex] + yOffset; // stack the papers on top of each other with the given spacing
-                GameObject newPaper = PoolManager.Instance.GetObjectFromPool(ObjectPoolTypes.PAPER);
-                newPaper.transform.position = spawnPosition;
-                newPaper.transform.rotation = Quaternion.identity;
-                newPaper.transform.SetParent(transform);
-                paperStack.Push(newPaper);
-                currentTowerPapers[towerIndex]++; // increment the number of papers in the current tower
+                Transform spawnPoint = paperSpawnPoints[spawnIndex];
+                GameObject newPaper = spawnPoint != null ? PoolManager.Instance.GetObjectFromPool(ObjectPoolTypes.PAPER) : null;
+                if (newPaper != null)
+                {
+                    Vector3 spawnPosition = spawnPoint.position; // get the spawn position from the chosen spawn point
+                    int towerIndex = spawnIndex; // use the spawn index as the tower index
+                    spawnPosition.y = paperStackSpacing * currentTowerPapers[towerIndex] + yOffset; // stack the papers on top of each other with the given spacing
+                    newPaper.transform.position = spawnPosition;
+                    newPaper.transform.rotation = Quaternion.identity;
+                    newPaper.transform.SetParent(transform);
+                    paperStack.Push(newPaper);
+                    currentTowerPapers[towerIndex]++; // increment the number of papers in the current tower
+                }
             }
             // Wait for the spawn interval before spawning the next paper
-            yield return new WaitForSeconds(spawnInterval);
+            yield return wait;
         }
     }
 
@@ -76,40 +100,59 @@ public class PaperCollectZone : Zone
 
     private IEnumerator CollectPaper(PlayerManager playerManager)
     {
+        var wait = new WaitForSeconds(collectInterval);
         while (true)
         {
-            yield return new WaitForSeconds(collectInterval);
-            if (paperStack.Count > 0)
-            {
-                playerManager.CollectPaper(1, (canCollect) =>
-                {
-                    if (canCollect)
-                    {
-                        // Pop the top paper from the queue and return it
-                        GameObject oldPaper = paperStack.Pop();
-                        Vector3 collectedPosition = oldPaper.transform.position;
-                        int towerIndex = GetTowerIndex(collectedPosition);
-                        playerManager.StackingPaper(oldPaper);
+            yield return wait;
 
-                                            
-                        currentTowerPapers[towerIndex]--;
-                    }
-                });
+            // A failure while collecting one paper must never end this coroutine, otherwise the zone
+            // stays marked as "collecting" and the player is stuck until it is re-entered.
+            try
+            {
+                TryCollectOnePaper(playerManager);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e, this);
             }
         }
     }
 
-    private int GetTowerIndex(Vector3 position)
+    private void TryCollectOnePaper(PlayerManager playerManager)
     {
-        float distanceThreshold = 0.1f; // adjust this value as needed
-        for (int i = 0; i < paperSpawnPoints.Length; i++)
+        if (paperStack.Count == 0) return;
+
+        playerManager.CollectPaper(1, (canCollect) =>
         {
-            if (Mathf.Abs(position.x - paperSpawnPoints[i].position.x) < distanceThreshold)
+            if (!canCollect) return;
+
+            GameObject paper = paperStack.Peek();
+            if (paper == null)
             {
-                return i;
+                // a destroyed paper can never be collected, drop it so it does not block the stack
+                paperStack.Pop();
+                ReleaseTowerSlot();
+                return;
             }
-        }
-        return -1;
+
+            // The paper only leaves this zone when the player actually accepted it.
+            if (!playerManager.TryStackPaper(paper)) return;
+
+            paperStack.Pop();
+            ReleaseTowerSlot();
+        });
+    }
+
+    /// <summary>
+    /// Frees the tower slot of the paper that was just removed. Papers are spawned with
+    /// tower = (stack size before the push) % towers and removed in LIFO order, so the tower of the
+    /// removed paper is (stack size after the pop) % towers.
+    /// </summary>
+    private void ReleaseTowerSlot()
+    {
+        int towerIndex = paperStack.Count % currentTowerPapers.Length;
+        if (currentTowerPapers[towerIndex] > 0)
+            currentTowerPapers[towerIndex]--;
     }
 
 

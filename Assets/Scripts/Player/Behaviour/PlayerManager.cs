@@ -20,14 +20,24 @@ public class PlayerManager : MonoBehaviour
 
 
     private bool isPaperHanging;
+    private bool stackRestored;
     public static UnityAction<bool> onHangingPaper = delegate { };
-    private Stack<GameObject> paperStack = new Stack<GameObject>();
+
+    /// <summary>
+    /// The single source of truth for the carried papers (top of the stack = Peek).
+    /// A paper is pushed the moment it is accepted, even while it is still flying to the hold point.
+    /// playerData.currentPaperStackCount is only a mirror of this and is written in SyncPaperCount().
+    /// </summary>
+    private readonly Stack<GameObject> paperStack = new Stack<GameObject>();
 
     [Space]
     public GameObject maxStackText;
     private void OnEnable()
     {
         SpawnManager.onInstantiatingPools += GeneratePaperStacking;
+        // The pools may already be ready if this component is enabled after SpawnManager.Start.
+        if (SpawnManager.PoolsReady)
+            GeneratePaperStacking();
     }
 
     private void OnDisable()
@@ -36,21 +46,44 @@ public class PlayerManager : MonoBehaviour
     }
 
 
+    /// <summary>
+    /// Rebuilds the carried stack from the persisted count. The stored value is validated first
+    /// (it is a ScriptableObject, so it can be stale or out of range), and the real stack is rebuilt
+    /// paper by paper so the count and the stack can never disagree.
+    /// </summary>
     private void GeneratePaperStacking()
     {
-        if(playerData.currentPaperStackCount > 0)
+        if (stackRestored) return;
+        stackRestored = true;
+
+        int max = Mathf.Max(0, playerData.maxPaperStackCount);
+        int stored = playerData.currentPaperStackCount;
+        int target = Mathf.Clamp(stored, 0, max);
+        if (target != stored)
+            Debug.LogWarning($"PlayerData.currentPaperStackCount ({stored}) was out of range, using {target}.");
+
+        SyncPaperCount(); // mirror starts from the real (empty) stack
+
+        for (int i = 0; i < target; i++)
         {
-            for (int i = 0; i < playerData.currentPaperStackCount; i++)
+            GameObject paper = PoolManager.Instance.GetObjectFromPool(ObjectPoolTypes.PAPER);
+            if (paper == null)
             {
-                StackingPaper(PoolManager.Instance.GetObjectFromPool(ObjectPoolTypes.PAPER));
+                Debug.LogWarning("Paper pool returned no paper while restoring the carried stack.");
+                break;
+            }
+            if (!TryStackPaper(paper))
+            {
+                PoolManager.Instance.ReturnObjectToPool(ObjectPoolTypes.PAPER, paper);
+                break;
             }
         }
     }
 
     private void Update()
     {
-        bool shouldHangPaper = playerData.currentPaperStackCount > 0 && !isPaperHanging;
-        bool shouldUnhangPaper = playerData.currentPaperStackCount == 0 && isPaperHanging;
+        bool shouldHangPaper = paperStack.Count > 0 && !isPaperHanging;
+        bool shouldUnhangPaper = paperStack.Count == 0 && isPaperHanging;
 
         if (shouldHangPaper)
         {
@@ -64,19 +97,33 @@ public class PlayerManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Writes the real stack size into the PlayerData mirror and hides the max-stack text once there is room again.
+    /// This is the only place that writes playerData.currentPaperStackCount.
+    /// </summary>
+    private void SyncPaperCount()
+    {
+        int count = paperStack.Count;
+        playerData.currentPaperStackCount = count;
 
+        if (maxStackText != null && count < playerData.maxPaperStackCount && maxStackText.activeSelf)
+            maxStackText.SetActive(false);
+    }
+
+
+    /// <summary>
+    /// Only answers "is there room?". It no longer changes any count; the count changes when the paper is actually stacked.
+    /// </summary>
     public void CollectPaper(int collectedPaper, Action<bool> callback)
     {
-        if (playerData.currentPaperStackCount >= playerData.maxPaperStackCount)
+        if (paperStack.Count >= playerData.maxPaperStackCount)
         {
-            Debug.Log("Can't Collect ");
-            if (!maxStackText.activeSelf)
+            if (maxStackText != null && !maxStackText.activeSelf)
                 maxStackText.SetActive(true);
-            callback.Invoke(false);
+            callback?.Invoke(false);
             return;
         }
-        callback.Invoke(true);
-        playerData.currentPaperStackCount++;
+        callback?.Invoke(true);
     }
 
     public void CollectMoney(GameObject moneyObject, Action callback)
@@ -99,74 +146,84 @@ public class PlayerManager : MonoBehaviour
     }
 
 
+    /// <summary>
+    /// Only answers "is there a paper to send?". Nothing is decremented here; the paper leaves the
+    /// stack in UnStackingPaper, so a transfer can never remove a count without removing a paper.
+    /// </summary>
     public void TransferPaper(Action<bool> callback)
     {
-        if (playerData.currentPaperStackCount <= 0)
+        if (paperStack.Count == 0)
         {
-            callback.Invoke(false);
+            callback?.Invoke(false);
             return;
         }
 
-        if (maxStackText.activeSelf)
-            maxStackText.SetActive(false);
-
-        callback.Invoke(true);
-        playerData.currentPaperStackCount--;
+        callback?.Invoke(true);
     }
 
 
+    /// <summary>
+    /// Kept for compatibility. Callers that must not lose the paper on rejection should use TryStackPaper.
+    /// </summary>
     public void StackingPaper(GameObject paper)
     {
-        if (playerData.currentPaperStackCount > playerData.maxPaperStackCount)
+        TryStackPaper(paper);
+    }
+
+    /// <summary>
+    /// Adds the paper to the carried stack immediately (count and stack change together), then animates it
+    /// to its slot. Returns false, without touching the paper, when it is null or the stack is full.
+    /// </summary>
+    public bool TryStackPaper(GameObject paper)
+    {
+        if (paper == null) return false;
+
+        if (paperStack.Count >= playerData.maxPaperStackCount)
         {
-            Debug.Log("Max Stack ");
-            return;
+            if (maxStackText != null && !maxStackText.activeSelf)
+                maxStackText.SetActive(true);
+            return false;
         }
 
+        // The slot is fixed now, so the final position never depends on the order the tweens finish in.
+        int slot = paperStack.Count;
+        float paperHeight = paper.transform.lossyScale.y;
+        GameObject paperBelow = slot > 0 ? paperStack.Peek() : null;
+
+        paperStack.Push(paper);
+        SyncPaperCount();
+
         AudioManager.Instance.PlaySFX(paperSound);
+        paper.transform.DOKill();
         paper.transform.DOMove(holdPaperPoint.position, 0.3f).OnComplete(() =>
         {
+            if (paper == null) return;
 
-            // Animation is complete, do any additional actions here
             paper.transform.SetParent(holdPaperPoint);
+            paper.transform.position = holdPaperPoint.position + Vector3.up * (paperHeight * slot);
 
-            if (paperStack.Count > 0)
-            {
-                // get the top paper in the stack
-                GameObject topPaper = paperStack.Peek();
-
-                // calculate the position for the new paper based on the position and size of the top paper
-                Vector3 newPosition = topPaper.transform.position + new Vector3(0f, topPaper.transform.lossyScale.y, 0f);
-
-                // set the position of the new paper and add it to the stack
-                paper.transform.position = newPosition;
-
-                // keep the rotation of the new paper constant
-                paper.transform.rotation = Quaternion.AngleAxis(topPaper.transform.eulerAngles.y, Vector3.up);
-
-                paperStack.Push(paper);
-            }
-            else
-            {
-
-                // if the stack is empty, just add the paper at the player holder point
-                paperStack.Push(paper);
-            }
+            // keep the rotation of the new paper aligned with the one below it
+            if (paperBelow != null)
+                paper.transform.rotation = Quaternion.AngleAxis(paperBelow.transform.eulerAngles.y, Vector3.up);
         });
-        //paper.transform.position = holdPaperPoint.position;
 
-       
+        return true;
     }
 
     public void UnStackingPaper(Action<GameObject> onPaperUnstack)
     {
-        if (paperStack.Count > 0)
-        {
-            Debug.Log("UnStacking Papaer");
-            // get the top paper in the stack
-            GameObject topPaper = paperStack.Pop();
-            AudioManager.Instance.PlaySFX(paperSound);
-            onPaperUnstack?.Invoke(topPaper);
-        }
+        // skip any paper that was destroyed externally
+        GameObject topPaper = null;
+        while (topPaper == null && paperStack.Count > 0)
+            topPaper = paperStack.Pop();
+
+        SyncPaperCount();
+
+        if (topPaper == null) return;
+
+        // the paper may still be flying to the hold point; its arrival must not re-parent it to the player
+        topPaper.transform.DOKill();
+        AudioManager.Instance.PlaySFX(paperSound);
+        onPaperUnstack?.Invoke(topPaper);
     }
 }
