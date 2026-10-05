@@ -17,7 +17,13 @@ public class PlayerMovement : MonoBehaviour
     
     private Vector2 _inputVector;
     float turnSmoothVelocity;
-    Vector3 currentVelocity;
+    float currentSpeed; // speed along the facing direction, so the player never slides sideways
+
+    // Joystick values below this are treated as "no input"; above it the magnitude is rescaled back to 0..1.
+    private const float InputDeadZone = 0.1f;
+    // Run animation hysteresis on the real (post-collision) speed, in m/s.
+    private const float RunStartSpeed = 0.5f;
+    private const float RunStopSpeed = 0.25f;
 
     public static UnityAction<bool> onPlayerMove = delegate { };
     private bool isPlayerMoving;
@@ -60,56 +66,66 @@ public class PlayerMovement : MonoBehaviour
 
     private void RecalculateMovement()
     {
-        Vector3 direction = new Vector3(_inputVector.x, 0f, _inputVector.y).normalized;
+        float dt = Time.deltaTime;
 
-        if (direction.magnitude >= 0.1f)
+        // Analog input: direction from the stick, strength from how far it is pushed (0..1).
+        Vector2 input = Vector2.ClampMagnitude(_inputVector, 1f);
+        float inputMagnitude = input.magnitude;
+        float strength = inputMagnitude <= InputDeadZone ? 0f : Mathf.Clamp01((inputMagnitude - InputDeadZone) / (1f - InputDeadZone));
+
+        float targetSpeed = 0f;
+        if (strength > 0f)
         {
+            Vector3 direction = new Vector3(input.x, 0f, input.y).normalized;
             float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
             float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, movementSettings.RotationSmoothTime);
             transform.rotation = Quaternion.Euler(0f, angle, 0f);
 
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
-            currentVelocity += (moveDir.normalized * movementSettings.MoveSpeed - currentVelocity) * movementSettings.airResistance;
-            controller.Move(currentVelocity * Time.deltaTime);
-
-            //this is for preventing the player to move outside the map
-            if (mapBoundsTransform != null)
-            {
-                Vector3 position = transform.position;
-                position.x = Mathf.Clamp(position.x, bounds.min.x, bounds.max.x);
-                position.z = Mathf.Clamp(position.z, bounds.min.z, bounds.max.z);
-                transform.position = position;
-            }
-            
-            //this is for animation State
-            if (!isPlayerMoving)
-            {
-                onPlayerMove.Invoke(true);
-                isPlayerMoving = true;
-            }
-            
+            // The player only moves where it is facing, so a sharp turn first slows down and rotates
+            // instead of sliding sideways. Facing the stick direction gives full speed, 90 degrees or more gives none.
+            float alignment = Mathf.Clamp01(Vector3.Dot(transform.forward, direction));
+            targetSpeed = movementSettings.MoveSpeed * strength * alignment;
         }
-        else
+
+        // Frame-rate independent acceleration and deceleration (m/s per second).
+        currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, movementSettings.SpeedChangeRate * dt);
+
+        Vector3 move = transform.forward * (currentSpeed * dt);
+
+        // Keep the player inside the map by trimming the move itself, not by writing transform.position
+        // (writing the position of a CharacterController desyncs it from the physics state).
+        if (mapBoundsTransform != null)
         {
-            currentVelocity = Vector3.Lerp(currentVelocity, Vector3.zero, movementSettings.airResistance);
-            controller.Move(currentVelocity * Time.deltaTime);
-            
-            if (mapBoundsTransform != null)
-            {
-                Vector3 position = transform.position;
-                position.x = Mathf.Clamp(position.x, bounds.min.x, bounds.max.x);
-                position.z = Mathf.Clamp(position.z, bounds.min.z, bounds.max.z);
-                transform.position = position;
-            }
-
-            //this is for animation State
-            if (isPlayerMoving)
-            {
-                onPlayerMove.Invoke(false);
-                isPlayerMoving = false;
-            }
+            Vector3 position = transform.position;
+            move.x = Mathf.Clamp(position.x + move.x, bounds.min.x, bounds.max.x) - position.x;
+            move.z = Mathf.Clamp(position.z + move.z, bounds.min.z, bounds.max.z) - position.z;
         }
 
+        controller.Move(move);
+
+        UpdateMoveState();
+    }
+
+    /// <summary>
+    /// Run/idle follows the speed the controller really achieved (so pushing into a wall plays idle),
+    /// with hysteresis so it cannot flicker around the threshold.
+    /// </summary>
+    private void UpdateMoveState()
+    {
+        Vector3 velocity = controller.velocity;
+        velocity.y = 0f;
+        float actualSpeed = velocity.magnitude;
+
+        if (!isPlayerMoving && actualSpeed > RunStartSpeed)
+        {
+            isPlayerMoving = true;
+            onPlayerMove.Invoke(true);
+        }
+        else if (isPlayerMoving && actualSpeed < RunStopSpeed)
+        {
+            isPlayerMoving = false;
+            onPlayerMove.Invoke(false);
+        }
     }
     #endregion
 

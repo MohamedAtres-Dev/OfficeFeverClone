@@ -13,8 +13,9 @@ public class PlayerMovementSettings : ScriptableObject
 	[Tooltip("How fast the character turns to face movement direction")]
 	[Range(0.0f, 0.3f)]
 	public float RotationSmoothTime = 0.12f;
-	[Tooltip("Acceleration and deceleration")]
-	public float SpeedChangeRate = 10.0f;
+	[Tooltip("Acceleration and deceleration in m/s per second. Higher = snappier start and stop.")]
+	public float SpeedChangeRate = 50.0f;
 
+    [Tooltip("No longer used. Kept so existing assets keep their serialized data; use SpeedChangeRate.")]
     public float airResistance = 0.1f;
 }

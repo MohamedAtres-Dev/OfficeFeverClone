@@ -15,5 +15,5 @@ MonoBehaviour:
   MoveSpeed: 6
   SprintSpeed: 5.335
   RotationSmoothTime: 0.1
-  SpeedChangeRate: 10
+  SpeedChangeRate: 50
   airResistance: 0.1
