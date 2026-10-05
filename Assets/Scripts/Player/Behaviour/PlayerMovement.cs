@@ -18,6 +18,12 @@ public class PlayerMovement : MonoBehaviour
     private Vector2 _inputVector;
     float turnSmoothVelocity;
     float currentSpeed; // speed along the facing direction, so the player never slides sideways
+    float verticalVelocity;
+
+    // The controller needs gravity: without it, rubbing along an edge lifts it a few millimetres at a time
+    // and it never comes back down. The flat zone triggers then stop detecting the player.
+    private const float Gravity = -25f;
+    private const float GroundedPush = -2f;
 
     // Joystick values below this are treated as "no input"; above it the magnitude is rescaled back to 0..1.
     private const float InputDeadZone = 0.1f;
@@ -100,6 +106,13 @@ public class PlayerMovement : MonoBehaviour
             move.x = Mathf.Clamp(position.x + move.x, bounds.min.x, bounds.max.x) - position.x;
             move.z = Mathf.Clamp(position.z + move.z, bounds.min.z, bounds.max.z) - position.z;
         }
+
+        // Keep the controller pressed onto the floor so its height always returns to ground level.
+        if (controller.isGrounded && verticalVelocity < 0f)
+            verticalVelocity = GroundedPush;
+        else
+            verticalVelocity += Gravity * dt;
+        move.y = verticalVelocity * dt;
 
         controller.Move(move);
 
