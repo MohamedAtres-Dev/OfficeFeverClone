@@ -44,6 +44,19 @@ public class PlayerManager : MonoBehaviour
     [Tooltip("Minimum seconds between money effects. Coins are credited many times per second, so only the first of each burst plays.")]
     [SerializeField] private float moneyVFXInterval = 0.35f;
 
+    [Header("Money Collection")]
+    [Tooltip("Seconds a coin takes to fly into the player.")]
+    [SerializeField] private float moneyFlightDuration = 0.28f;
+    [SerializeField] private float moneyArcHeight = 0.5f;
+    [Tooltip("Metres above the player's pivot that coins fly to (roughly chest height).")]
+    [SerializeField] private float moneyTargetHeight = 0.9f;
+    [Tooltip("Coins landing within this many seconds of each other count as one chain.")]
+    [SerializeField] private float moneyChainWindow = 0.2f;
+    [SerializeField] private int moneyChainMax = 10;
+    [SerializeField] private float moneyPitchStep = 0.04f;
+
+    private float lastMoneyCollectTime = -10f;
+    private int moneyChain;
     private float nextMoneyVFXTime;
     private bool isPaperHanging;
     private bool stackRestored;
@@ -155,22 +168,50 @@ public class PlayerManager : MonoBehaviour
 
     public void CollectMoney(GameObject moneyObject, Action callback)
     {
-        // calculate the attraction force based on the distance and strength
-        float distance = Vector3.Distance(transform.position, moneyObject.transform.position);
-        float attractionForce = attractionStrength / distance;
+        if (moneyObject == null) return;
 
-        // use DOTween to move the money object to the player
-        moneyObject.transform.DOMove(transform.position, attractionDuration)
-            .SetEase(Ease.InOutQuad)
+        Transform moneyTransform = moneyObject.transform;
+        moneyTransform.DOKill(true);             // finish the spawn pop, so the base scale below is the real one
+        moneyTransform.SetParent(null, true);    // fly in world space, independent of the zone it came from
+        Vector3 startPosition = moneyTransform.position;
+        Vector3 baseScale = moneyTransform.localScale;
+
+        // A short arc into the player. The target is re-read every frame, so the coin homes in on a moving player.
+        DOVirtual.Float(0f, 1f, Mathf.Max(0.01f, moneyFlightDuration), progress =>
+            {
+                if (moneyObject == null) return;
+
+                Vector3 target = transform.position + Vector3.up * moneyTargetHeight;
+                Vector3 position = Vector3.LerpUnclamped(startPosition, target, progress);
+                position.y += moneyArcHeight * Mathf.Sin(progress * Mathf.PI);
+                moneyTransform.position = position;
+
+                // swells slightly on the way up, then is absorbed by the player
+                float scale = progress < 0.4f
+                    ? Mathf.Lerp(1f, 1.2f, progress / 0.4f)
+                    : Mathf.Lerp(1.2f, 0.35f, (progress - 0.4f) / 0.6f);
+                moneyTransform.localScale = baseScale * scale;
+            })
+            .SetEase(Ease.InSine)                                    // accelerates into the player
+            .SetUpdate(UpdateType.Late)                              // after the player moved this frame
+            .SetTarget(moneyTransform)
+            .SetLink(moneyObject, LinkBehaviour.KillOnDisable)
             .OnComplete(() =>
             {
-                // update the coins when the collection is finished
+                // the coins are credited at the moment the coin lands, so the HUD counter changes exactly then
                 CurrencyManager.Instance.UpdateCoins(playerData.moneyIncreaseRate);
-                AudioManager.Instance.PlaySFX(coinSound);
+                PlayMoneyCollectSound();
                 PlayMoneyVFX();
-                // destroy the money object after collecting it
-                callback.Invoke();
+                callback?.Invoke(); // gives the coin back to the pool
             });
+    }
+
+    /// <summary>Coins landing in quick succession climb in pitch (a rising "ka-ching" rhythm) and reset after a pause.</summary>
+    private void PlayMoneyCollectSound()
+    {
+        moneyChain = Time.time - lastMoneyCollectTime <= moneyChainWindow ? Mathf.Min(moneyChain + 1, moneyChainMax) : 0;
+        lastMoneyCollectTime = Time.time;
+        AudioManager.Instance.PlaySFX(coinSound, 0.8f, 1f + moneyChain * moneyPitchStep);
     }
 
 

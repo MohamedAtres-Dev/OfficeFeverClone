@@ -2,6 +2,7 @@
   <Project Path="LeanCommon.csproj" />
   <Project Path="LeanTransition.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="CW.Common.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="LeanGUI.csproj" />

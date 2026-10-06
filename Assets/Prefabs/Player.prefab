@@ -1921,9 +1921,15 @@ MonoBehaviour:
   pickupPitchRange: 0.35
   paperPickupVFX: {fileID: 3638055008894448150, guid: e998c4f7f0362374384ac28dde1f4ca3, type: 3}
   pickupVFXHeightOffset: 0.05
-  moneyRewardVFX: {fileID: 8443821751171028148, guid: 4c52061efbf9b9d4298583a26949d93a, type: 3}
+  moneyRewardVFX: {fileID: 0}
   moneyVFXHeightOffset: 1.6
   moneyVFXInterval: 0.35
+  moneyFlightDuration: 0.28
+  moneyArcHeight: 0.5
+  moneyTargetHeight: 0.9
+  moneyChainWindow: 0.2
+  moneyChainMax: 10
+  moneyPitchStep: 0.04
   maxStackText: {fileID: 0}
 --- !u!114 &6619942585879636728
 MonoBehaviour:

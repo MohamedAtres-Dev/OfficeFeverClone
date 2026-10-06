@@ -33,6 +33,8 @@ public class OfficeFactory : Singlton<OfficeFactory>
 
             foreach (var office in offices.allOffices)
             {
+                // an older save may hold more workstations than the current layout has spawn points
+                if (office.Key >= spawnPoints.Length) continue;
                 // Generate office at saved position
                 GenerateOffice(office.Key, office.Value);
             }

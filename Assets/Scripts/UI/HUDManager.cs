@@ -10,7 +10,8 @@ public class HUDManager : Singlton<HUDManager>
 {
     public TextMeshProUGUI coinsTxt;
 
-    private float animateCoinsTime = 0.4f;
+    private float animateCoinsTime = 0.18f;
+    private Tween coinCountTween;
     private int animatedCoinsValue = 0;
 
     public GameObject joyStickObject;
@@ -31,37 +32,33 @@ public class HUDManager : Singlton<HUDManager>
     private void OnDisable()
     {
         CurrencyManager.onUpdateCoins -= UpdateCoinsUI;
+        coinCountTween?.Kill();
+        if (coinsTxt != null) coinsTxt.transform.DOKill(true);
     }
 
 
+    /// <summary>
+    /// Runs the moment coins are credited (money coins credit on landing), so the number and the pop line up with
+    /// the coin hitting the player. Earlier count/pop tweens are replaced, so rapid coins never stack tweens.
+    /// </summary>
     private void UpdateCoinsUI(int value)
     {
-        coinsTxt.transform.DOScale(1.2f, 0.2f).SetLoops(2, LoopType.Yoyo);
-        int currentValue = MathHelper.ParseFormattedNumber(coinsTxt.text);
+        coinsTxt.transform.DOKill(true); // finish the previous pop so the scale is back at 1 before the next one
+        coinsTxt.transform.DOScale(1.15f, 0.08f).SetLoops(2, LoopType.Yoyo).SetTarget(coinsTxt.transform);
 
-        if (value >= currentValue)
+        coinCountTween?.Kill();
+        coinCountTween = DOTween.To(() => animatedCoinsValue, x =>
         {
-            DOTween.To(() => animatedCoinsValue, x =>
-            {
-                animatedCoinsValue = x;
-                coinsTxt.text = MathHelper.FormatNumber(x);
-            }, value, animateCoinsTime).SetEase(Ease.InBounce);
-        }
-        else
-        {
-            animatedCoinsValue = currentValue;
-            DOTween.To(() => animatedCoinsValue, x =>
-            {
-                animatedCoinsValue = x;
-                coinsTxt.text = MathHelper.FormatNumber(x);
-            }, value, animateCoinsTime).SetEase(Ease.InBounce);
-        }
+            animatedCoinsValue = x;
+            coinsTxt.text = MathHelper.FormatNumber(x);
+        }, value, animateCoinsTime).SetEase(Ease.OutQuad).SetTarget(this);
     }
 
 
     // Start is called before the first frame update
     void Start()
     {
+        animatedCoinsValue = CurrencyManager.Instance.GetCoins();
         coinsTxt.text = MathHelper.FormatNumber(CurrencyManager.Instance.GetCoins()).ToString();
         ActivateJoystic(GetJoysticState());
     }
