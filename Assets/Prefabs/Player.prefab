@@ -1913,6 +1913,17 @@ MonoBehaviour:
   holdPaperPoint: {fileID: 6619942585100643592}
   coinSound: {fileID: 8300000, guid: ed972a2811bc4d44da2152edc7ce9240, type: 3}
   paperSound: {fileID: 0}
+  pickupDuration: 0.3
+  pickupArcHeight: 0.35
+  popScale: 1.25
+  popUpTime: 0.06
+  popDownTime: 0.14
+  pickupPitchRange: 0.35
+  paperPickupVFX: {fileID: 3638055008894448150, guid: e998c4f7f0362374384ac28dde1f4ca3, type: 3}
+  pickupVFXHeightOffset: 0.05
+  moneyRewardVFX: {fileID: 8443821751171028148, guid: 4c52061efbf9b9d4298583a26949d93a, type: 3}
+  moneyVFXHeightOffset: 1.6
+  moneyVFXInterval: 0.35
   maxStackText: {fileID: 0}
 --- !u!114 &6619942585879636728
 MonoBehaviour:

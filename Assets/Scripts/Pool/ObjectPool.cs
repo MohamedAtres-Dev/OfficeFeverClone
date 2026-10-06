@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 
 public abstract class ObjectPool : MonoBehaviour
 {
@@ -27,6 +28,7 @@ public abstract class ObjectPool : MonoBehaviour
         {
             if (!obj.activeInHierarchy)
             {
+                ResetObject(obj); // defensive: a reused object always starts from its prefab state
                 obj.SetActive(true);
                 return obj;
             }
@@ -41,7 +43,24 @@ public abstract class ObjectPool : MonoBehaviour
     public void ReturnObjectToPool(GameObject obj)
     {
         obj.transform.SetParent(transform);
+        ResetObject(obj);
         obj.SetActive(false);
+    }
+
+    /// <summary>
+    /// Stops any tween still running on the object and restores the scale and rotation a tween (for example a
+    /// pickup pop) may have left behind, so the next user of the pooled object never inherits them.
+    /// </summary>
+    private void ResetObject(GameObject obj)
+    {
+        Transform objTransform = obj.transform;
+        objTransform.DOKill();
+
+        if (prefab != null)
+        {
+            objTransform.localScale = prefab.transform.localScale;
+            objTransform.localRotation = prefab.transform.localRotation;
+        }
     }
 }
 

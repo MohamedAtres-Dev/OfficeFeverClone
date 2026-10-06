@@ -14,11 +14,25 @@ public class Office : MonoBehaviour
     [SerializeField] private OfficeGeneratorZone officeGenerator;
 
 
+    [Header("VFX")]
+    [Tooltip("Played once when this workstation is purchased and becomes active (UnlockUpgradeVFX).")]
+    [SerializeField] private PooledVFX unlockVFX;
+    [Tooltip("Where the unlock effect is centred, relative to the office root. Defaults to the worker's position.")]
+    [SerializeField] private Vector3 unlockVFXOffset = new Vector3(0f, 0.5f, 0f);
+
     private OfficeState currentState;
+    private bool isRestoringPapers;
+    private bool unlockPlayed;
 
     public void CreateOffice()
     {
         OfficeFactory.Instance.CreateOffice(this);
+
+        // Only a real purchase reaches here (the factory's load path never calls CreateOffice).
+        if (unlockPlayed) return;
+        unlockPlayed = true;
+        Vector3 centre = officeWorker != null ? officeWorker.transform.position : transform.position;
+        VFXPool.Instance.Play(unlockVFX, centre + unlockVFXOffset);
     }
 
     public int GetMoneyGeneratedCount()
@@ -60,7 +74,10 @@ public class Office : MonoBehaviour
 
     public void GeneratePaper(int paperAmount)
     {
+        // papers restored from the save must not trigger the worker's "papers received" response
+        isRestoringPapers = true;
         paperSender.GenerateInitialPapers(paperAmount);
+        isRestoringPapers = false;
     }
 
 
@@ -75,6 +92,6 @@ public class Office : MonoBehaviour
 
     public void OnGetPaper()
     {
-        officeWorker.OnGetpaper();
+        officeWorker.OnGetpaper(isRestoringPapers);
     }
 }

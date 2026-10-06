@@ -87,12 +87,13 @@ public class AudioManager : Singlton<AudioManager>
         musicSource.UnPause();
     }
 
-    public void PlaySFX(AudioClip audioClip, float volume = 1f)
+    public void PlaySFX(AudioClip audioClip, float volume = 1f, float pitch = 1f)
     {
         AudioSource audioSource = GetAvailableAudioSource();
         if (audioSource != null)
         {
             audioSource.clip = audioClip;
+            audioSource.pitch = pitch; // pooled sources are reused, so the pitch is always set explicitly
             audioSource.Play();
             StartCoroutine(ReturnAudioSourceToPoolAfterPlaying(audioSource));
         }

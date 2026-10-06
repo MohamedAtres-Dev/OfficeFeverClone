@@ -18,7 +18,33 @@ public class PlayerManager : MonoBehaviour
     [SerializeField] private AudioClip coinSound;
     [SerializeField] private AudioClip paperSound;
 
+    [Header("Pickup Feel")]
+    [Tooltip("Seconds a paper takes to fly into the stack (unchanged from before).")]
+    [SerializeField] private float pickupDuration = 0.3f;
+    [Tooltip("How high, in metres, the flight arcs above the straight line.")]
+    [SerializeField] private float pickupArcHeight = 0.35f;
+    [Tooltip("Scale multiplier of the pop when a paper lands on the stack.")]
+    [SerializeField] private float popScale = 1.25f;
+    [SerializeField] private float popUpTime = 0.06f;
+    [SerializeField] private float popDownTime = 0.14f;
+    [Tooltip("The pickup sound's pitch rises by this much from the first to the last paper of a full stack.")]
+    [SerializeField] private float pickupPitchRange = 0.35f;
 
+
+    [Header("VFX")]
+    [Tooltip("Played where a paper lands on the carried stack (PaperPickupVFX).")]
+    [SerializeField] private PooledVFX paperPickupVFX;
+    [Tooltip("Metres above the landed paper's centre where the effect is played.")]
+    [SerializeField] private float pickupVFXHeightOffset = 0.05f;
+
+    [Tooltip("Played above the player when money is credited (MoneyRewardVFX).")]
+    [SerializeField] private PooledVFX moneyRewardVFX;
+    [Tooltip("Metres above the player's pivot where the money effect plays.")]
+    [SerializeField] private float moneyVFXHeightOffset = 1.6f;
+    [Tooltip("Minimum seconds between money effects. Coins are credited many times per second, so only the first of each burst plays.")]
+    [SerializeField] private float moneyVFXInterval = 0.35f;
+
+    private float nextMoneyVFXTime;
     private bool isPaperHanging;
     private bool stackRestored;
     public static UnityAction<bool> onHangingPaper = delegate { };
@@ -72,7 +98,8 @@ public class PlayerManager : MonoBehaviour
                 Debug.LogWarning("Paper pool returned no paper while restoring the carried stack.");
                 break;
             }
-            if (!TryStackPaper(paper))
+            // restored papers are placed instantly: no flight, pop or sound burst at startup
+            if (!TryStackPaper(paper, false))
             {
                 PoolManager.Instance.ReturnObjectToPool(ObjectPoolTypes.PAPER, paper);
                 break;
@@ -140,9 +167,24 @@ public class PlayerManager : MonoBehaviour
                 // update the coins when the collection is finished
                 CurrencyManager.Instance.UpdateCoins(playerData.moneyIncreaseRate);
                 AudioManager.Instance.PlaySFX(coinSound);
+                PlayMoneyVFX();
                 // destroy the money object after collecting it
                 callback.Invoke();
             });
+    }
+
+
+    /// <summary>
+    /// Leading-edge throttle: the first credited coin of a burst plays the effect, the rest of the burst
+    /// (coins arrive every few milliseconds) are skipped until the interval has passed.
+    /// </summary>
+    private void PlayMoneyVFX()
+    {
+        if (moneyRewardVFX == null || Time.time < nextMoneyVFXTime) return;
+
+        nextMoneyVFXTime = Time.time + moneyVFXInterval;
+        Vector3 offset = Vector3.up * moneyVFXHeightOffset;
+        VFXPool.Instance.Play(moneyRewardVFX, transform.position + offset, transform, offset);
     }
 
 
@@ -176,6 +218,11 @@ public class PlayerManager : MonoBehaviour
     /// </summary>
     public bool TryStackPaper(GameObject paper)
     {
+        return TryStackPaper(paper, true);
+    }
+
+    private bool TryStackPaper(GameObject paper, bool animated)
+    {
         if (paper == null) return false;
 
         if (paperStack.Count >= playerData.maxPaperStackCount)
@@ -187,27 +234,91 @@ public class PlayerManager : MonoBehaviour
 
         // The slot is fixed now, so the final position never depends on the order the tweens finish in.
         int slot = paperStack.Count;
-        float paperHeight = paper.transform.lossyScale.y;
-        GameObject paperBelow = slot > 0 ? paperStack.Peek() : null;
+        Transform paperTransform = paper.transform;
+        float paperHeight = paperTransform.lossyScale.y;
+
+        // The slot is described in the hold point's own space, so the stack moves rigidly with the player.
+        // World up gives the height (the hold point's own axes are rotated), so the stack stays vertical.
+        Vector3 slotLocalPosition = holdPaperPoint.InverseTransformVector(Vector3.up * (paperHeight * slot));
+        // Every paper takes the player's facing, so the stack stays aligned even when papers join while turning.
+        Quaternion slotLocalRotation = Quaternion.Inverse(holdPaperPoint.rotation) * transform.rotation;
 
         paperStack.Push(paper);
         SyncPaperCount();
 
-        AudioManager.Instance.PlaySFX(paperSound);
-        paper.transform.DOKill();
-        paper.transform.DOMove(holdPaperPoint.position, 0.3f).OnComplete(() =>
-        {
-            if (paper == null) return;
+        paperTransform.DOKill(); // a reused paper must never carry a tween from its previous use
 
-            paper.transform.SetParent(holdPaperPoint);
-            paper.transform.position = holdPaperPoint.position + Vector3.up * (paperHeight * slot);
-
-            // keep the rotation of the new paper aligned with the one below it
-            if (paperBelow != null)
-                paper.transform.rotation = Quaternion.AngleAxis(paperBelow.transform.eulerAngles.y, Vector3.up);
-        });
+        if (animated)
+            FlyPaperToSlot(paper, slot, slotLocalPosition, slotLocalRotation);
+        else
+            PlacePaperInSlot(paperTransform, slotLocalPosition, slotLocalRotation);
 
         return true;
+    }
+
+    /// <summary>
+    /// Flies the paper to its slot. The slot is re-read from the moving hold point every frame, so the paper
+    /// homes in on the player instead of a stale point, and it lands exactly in place (no snap at the end).
+    /// </summary>
+    private void FlyPaperToSlot(GameObject paper, int slot, Vector3 slotLocalPosition, Quaternion slotLocalRotation)
+    {
+        Transform paperTransform = paper.transform;
+        Vector3 startPosition = paperTransform.position;
+        Quaternion startRotation = paperTransform.rotation;
+
+        DOVirtual.Float(0f, 1f, Mathf.Max(0.01f, pickupDuration), progress =>
+            {
+                if (paper == null) return;
+
+                Vector3 target = holdPaperPoint.TransformPoint(slotLocalPosition);
+                Vector3 position = Vector3.LerpUnclamped(startPosition, target, progress);
+                position.y += pickupArcHeight * Mathf.Sin(progress * Mathf.PI);
+                paperTransform.position = position;
+                paperTransform.rotation = Quaternion.Slerp(startRotation, holdPaperPoint.rotation * slotLocalRotation, progress);
+            })
+            .SetEase(Ease.InOutSine)
+            .SetUpdate(UpdateType.Late)                             // after the player has moved this frame, so the paper never trails by a frame
+            .SetTarget(paperTransform)                              // paperTransform.DOKill() stops it
+            .SetLink(paper, LinkBehaviour.KillOnDisable)            // and so does returning the paper to the pool
+            .OnComplete(() =>
+            {
+                if (paper == null) return;
+
+                PlacePaperInSlot(paperTransform, slotLocalPosition, slotLocalRotation);
+                PopPaper(paperTransform);
+                // follows the landed paper (which now rides on the hold point) so it never trails behind a moving player
+                Vector3 pickupVfxOffset = Vector3.up * pickupVFXHeightOffset;
+                VFXPool.Instance.Play(paperPickupVFX, paperTransform.position + pickupVfxOffset, paperTransform, pickupVfxOffset);
+
+                float fill = playerData.maxPaperStackCount > 1 ? slot / (float)(playerData.maxPaperStackCount - 1) : 0f;
+                AudioManager.Instance.PlaySFX(paperSound, 1f, 1f + pickupPitchRange * fill);
+            });
+    }
+
+    private void PlacePaperInSlot(Transform paperTransform, Vector3 localPosition, Quaternion localRotation)
+    {
+        paperTransform.SetParent(holdPaperPoint, true);
+        paperTransform.localPosition = localPosition;
+        paperTransform.localRotation = localRotation;
+    }
+
+    /// <summary>
+    /// Small scale pop when a paper lands on the stack. The scale is always put back to exactly where it was,
+    /// even if the pop is interrupted (delivered or returned to the pool mid-pop).
+    /// </summary>
+    private void PopPaper(Transform paperTransform)
+    {
+        Vector3 baseScale = paperTransform.localScale;
+
+        DOTween.Sequence()
+            .Append(paperTransform.DOScale(baseScale * popScale, popUpTime).SetEase(Ease.OutQuad))
+            .Append(paperTransform.DOScale(baseScale, popDownTime).SetEase(Ease.OutBack))
+            .SetTarget(paperTransform)
+            .SetLink(paperTransform.gameObject, LinkBehaviour.KillOnDisable)
+            .OnKill(() =>
+            {
+                if (paperTransform != null) paperTransform.localScale = baseScale;
+            });
     }
 
     public void UnStackingPaper(Action<GameObject> onPaperUnstack)
