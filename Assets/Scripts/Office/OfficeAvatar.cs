@@ -181,8 +181,9 @@ public class OfficeAvatar : MonoBehaviour
 
         // rest: hands loosely forward on the lap/desk; work: typing, alternating
         float restPitch = -35f + Mathf.Sin(t * 1.3f) * 3f;
-        float typeL = -62f + Mathf.Sin(t * typingSpeed) * 13f;
-        float typeR = -62f + Mathf.Sin(t * typingSpeed + 2.4f) * 13f;
+        float speed = typingSpeed * UpgradeManager.Instance.WorkSpeedFactor;   // the Worker Speed upgrade types faster too
+        float typeL = -62f + Mathf.Sin(t * speed) * 13f;
+        float typeR = -62f + Mathf.Sin(t * speed + 2.4f) * 13f;
         float pitchL = Mathf.Lerp(restPitch, typeL, workBlend);
         float pitchR = Mathf.Lerp(restPitch, typeR, workBlend) - stamp * 28f;   // right hand slams the paper
 

@@ -29,11 +29,12 @@ public class Office : MonoBehaviour
 
     public void CreateOffice()
     {
-        OfficeFactory.Instance.CreateOffice(this);
-
         // Only a real purchase reaches here (the factory's load path never calls CreateOffice).
+        // The guard comes first so a duplicate call can neither re-save nor replay the build.
         if (unlockPlayed) return;
         unlockPlayed = true;
+
+        OfficeFactory.Instance.CreateOffice(this);
 
         // The factory has just activated the worker/desk; start the build-in on the same frame so the finished
         // desk is never visible for even one frame. The big effect fires at the strongest moment of the build.

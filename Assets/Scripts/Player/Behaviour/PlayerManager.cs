@@ -71,9 +71,16 @@ public class PlayerManager : MonoBehaviour
 
     [Space]
     public GameObject maxStackText;
+
+    /// <summary>Base capacity from PlayerData plus the Carry Capacity upgrade. PlayerData itself is never modified.</summary>
+    public int MaxPaperStack => Mathf.Max(0, playerData.maxPaperStackCount) + UpgradeManager.Instance.CapacityBonus;
+
+    /// <summary>(carried papers, capacity). Raised whenever either changes; drives the HUD capacity chip.</summary>
+    public static event Action<int, int> onPaperCountChanged;
     private void OnEnable()
     {
         SpawnManager.onInstantiatingPools += GeneratePaperStacking;
+        UpgradeManager.onLevelChanged += OnUpgradeChanged;
         // The pools may already be ready if this component is enabled after SpawnManager.Start.
         if (SpawnManager.PoolsReady)
             GeneratePaperStacking();
@@ -82,6 +89,13 @@ public class PlayerManager : MonoBehaviour
     private void OnDisable()
     {
         SpawnManager.onInstantiatingPools -= GeneratePaperStacking;
+        UpgradeManager.onLevelChanged -= OnUpgradeChanged;
+    }
+
+    private void OnUpgradeChanged(UpgradeManager.UpgradeType type, int level)
+    {
+        // a bigger capacity frees room at once: the carried stack is untouched, the MAX label just goes away
+        if (type == UpgradeManager.UpgradeType.Capacity) SyncPaperCount();
     }
 
 
@@ -95,7 +109,7 @@ public class PlayerManager : MonoBehaviour
         if (stackRestored) return;
         stackRestored = true;
 
-        int max = Mathf.Max(0, playerData.maxPaperStackCount);
+        int max = Mathf.Max(0, MaxPaperStack);
         int stored = playerData.currentPaperStackCount;
         int target = Mathf.Clamp(stored, 0, max);
         if (target != stored)
@@ -146,8 +160,10 @@ public class PlayerManager : MonoBehaviour
         int count = paperStack.Count;
         playerData.currentPaperStackCount = count;
 
-        if (maxStackText != null && count < playerData.maxPaperStackCount && maxStackText.activeSelf)
+        if (maxStackText != null && count < MaxPaperStack && maxStackText.activeSelf)
             maxStackText.SetActive(false);
+
+        onPaperCountChanged?.Invoke(count, MaxPaperStack);
     }
 
 
@@ -156,7 +172,7 @@ public class PlayerManager : MonoBehaviour
     /// </summary>
     public void CollectPaper(int collectedPaper, Action<bool> callback)
     {
-        if (paperStack.Count >= playerData.maxPaperStackCount)
+        if (paperStack.Count >= MaxPaperStack)
         {
             if (maxStackText != null && !maxStackText.activeSelf)
                 maxStackText.SetActive(true);
@@ -266,7 +282,7 @@ public class PlayerManager : MonoBehaviour
     {
         if (paper == null) return false;
 
-        if (paperStack.Count >= playerData.maxPaperStackCount)
+        if (paperStack.Count >= MaxPaperStack)
         {
             if (maxStackText != null && !maxStackText.activeSelf)
                 maxStackText.SetActive(true);
@@ -331,7 +347,7 @@ public class PlayerManager : MonoBehaviour
                 Vector3 pickupVfxOffset = Vector3.up * pickupVFXHeightOffset;
                 VFXPool.Instance.Play(paperPickupVFX, paperTransform.position + pickupVfxOffset, paperTransform, pickupVfxOffset);
 
-                float fill = playerData.maxPaperStackCount > 1 ? slot / (float)(playerData.maxPaperStackCount - 1) : 0f;
+                float fill = MaxPaperStack > 1 ? slot / (float)(MaxPaperStack - 1) : 0f;
                 AudioManager.Instance.PlaySFX(paperSound, 1f, 1f + pickupPitchRange * fill);
             });
     }

@@ -99,7 +99,7 @@ public class OfficeWorker : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(workInterval);
+            yield return new WaitForSeconds(UpgradeManager.Instance.GetWorkInterval(workInterval));
 
             if(currentPaperAmount <= 0)
             {
