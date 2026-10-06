@@ -211,6 +211,7 @@ public class PlayerManager : MonoBehaviour
             .SetEase(Ease.InSine)                                    // accelerates into the player
             .SetUpdate(UpdateType.Late)                              // after the player moved this frame
             .SetTarget(moneyTransform)
+            .SetRecyclable(true)
             .SetLink(moneyObject, LinkBehaviour.KillOnDisable)
             .OnComplete(() =>
             {
@@ -336,6 +337,7 @@ public class PlayerManager : MonoBehaviour
             .SetEase(Ease.InOutSine)
             .SetUpdate(UpdateType.Late)                             // after the player has moved this frame, so the paper never trails by a frame
             .SetTarget(paperTransform)                              // paperTransform.DOKill() stops it
+            .SetRecyclable(true)
             .SetLink(paper, LinkBehaviour.KillOnDisable)            // and so does returning the paper to the pool
             .OnComplete(() =>
             {
@@ -371,6 +373,7 @@ public class PlayerManager : MonoBehaviour
             .Append(paperTransform.DOScale(baseScale * popScale, popUpTime).SetEase(Ease.OutQuad))
             .Append(paperTransform.DOScale(baseScale, popDownTime).SetEase(Ease.OutBack))
             .SetTarget(paperTransform)
+            .SetRecyclable(true)
             .SetLink(paperTransform.gameObject, LinkBehaviour.KillOnDisable)
             .OnKill(() =>
             {

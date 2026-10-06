@@ -32,7 +32,6 @@ public class PlayerInteract : MonoBehaviour
         {
             interactZones.Remove(zone);
             zone.StopAction();
-            Debug.Log("Clear Interact ");
         }
     }
 }

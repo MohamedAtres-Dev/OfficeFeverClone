@@ -24,6 +24,8 @@ public class MoneyCollectorZone : Zone
     [Tooltip("Layers shown before extra bundles share the top layer (keeps a big stash from becoming a tower).")]
     [SerializeField] private int maxVisibleLayers = 6;
     private Coroutine collectMoneyCoroutine;
+    private readonly WaitForSeconds collectWait = new WaitForSeconds(0.04f);      // same values as collectInterval / fastCollectInterval
+    private readonly WaitForSeconds fastCollectWait = new WaitForSeconds(0.015f);
 
     public Transform[] paperSpawnPoints; // an array of 3 predefined paper spawn points
     public float paperStackSpacing = 0.001f; // the amount of spacing between the stacked papers
@@ -93,6 +95,7 @@ public class MoneyCollectorZone : Zone
             .Join(t.DOScale(baseScale, 0.22f).SetEase(Ease.OutBack))
             .Join(t.DOMove(slotPosition, 0.2f).SetEase(Ease.OutQuad))
             .SetTarget(t)
+            .SetRecyclable(true)
             .SetLink(newMoney, LinkBehaviour.KillOnDisable)
             .OnKill(() =>
             {
@@ -140,7 +143,6 @@ public class MoneyCollectorZone : Zone
     public override void PerformAction(PlayerManager playerManager)
     {
         base.PerformAction(playerManager);
-        Debug.Log("Collect Money ");
         if (collectMoneyCoroutine == null)
             collectMoneyCoroutine = StartCoroutine(CollectMoney(playerManager));
     }
@@ -150,7 +152,7 @@ public class MoneyCollectorZone : Zone
     {
         while (true)
         {
-            yield return new WaitForSeconds(moneyQueue.Count > fastCollectThreshold ? fastCollectInterval : collectInterval);
+            yield return moneyQueue.Count > fastCollectThreshold ? fastCollectWait : collectWait;
 
             if (moneyQueue.Count > 0)
             {

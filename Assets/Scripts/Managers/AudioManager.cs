@@ -65,7 +65,6 @@ public class AudioManager : Singlton<AudioManager>
     public void SetSFXVolume(float volume)
     {
         audioMixer.SetFloat("SFXVolume", Mathf.Log10(volume) * 20);
-        Debug.Log("Set Sound " + Mathf.Log10(volume) * 20);
 
         PlayerPrefs.SetInt("SFXVolume", volume == 1 ? 1 : 0);
     }
@@ -73,7 +72,6 @@ public class AudioManager : Singlton<AudioManager>
     public void SetMusicVolume(float volume)
     {
         audioMixer.SetFloat("MusicVolume", Mathf.Log10(volume) * 20);
-        Debug.Log("Set Music " + Mathf.Log10(volume) * 20);
         PlayerPrefs.SetInt("MusicVolume", volume == 1 ? 1 : 0);
     }
 
@@ -97,8 +95,7 @@ public class AudioManager : Singlton<AudioManager>
             audioSource.clip = audioClip;
             audioSource.volume = volume;
             audioSource.pitch = pitch; // pooled sources are reused, so the pitch is always set explicitly
-            audioSource.Play();
-            StartCoroutine(ReturnAudioSourceToPoolAfterPlaying(audioSource));
+            audioSource.Play(); // a source is free again as soon as isPlaying turns false, no per-SFX coroutine needed
         }
     }
 
@@ -112,16 +109,6 @@ public class AudioManager : Singlton<AudioManager>
             }
         }
         return null;
-    }
-
-    private IEnumerator ReturnAudioSourceToPoolAfterPlaying(AudioSource audioSource)
-    {
-        while (audioSource.isPlaying)
-        {
-            yield return null;
-        }
-        audioSource.clip = null;
-        audioSource.Stop();
     }
 
     private AudioSource CreateAudioSource()

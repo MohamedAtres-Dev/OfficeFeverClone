@@ -8,6 +8,7 @@ using DG.Tweening;
 public class PaperSenderZone : Zone
 {
     private float sendInterval = 0.05f;
+    private WaitForSeconds sendWait;
     public Stack<GameObject> paperStack = new Stack<GameObject>();
     private Coroutine sendPaper;
     private int currentSendPaper;
@@ -81,6 +82,7 @@ public class PaperSenderZone : Zone
         t.DOKill();
         t.DOScale(t.localScale * 0.05f, 0.15f).SetEase(Ease.InQuad)
             .SetTarget(t)
+            .SetRecyclable(true)
             .SetLink(paper, LinkBehaviour.KillOnDisable)
             .OnComplete(() => PoolManager.Instance.ReturnObjectToPool(ObjectPoolTypes.PAPER, paper));
     }
@@ -124,6 +126,7 @@ public class PaperSenderZone : Zone
             })
             .SetEase(Ease.InOutSine)
             .SetTarget(t)
+            .SetRecyclable(true)
             .SetLink(paper, LinkBehaviour.KillOnDisable)
             .OnComplete(() =>
             {
@@ -152,7 +155,7 @@ public class PaperSenderZone : Zone
     {
         while (true)
         {
-            yield return new WaitForSeconds(sendInterval);
+            yield return sendWait ??= new WaitForSeconds(sendInterval);
 
             playerManager.TransferPaper((canTransfer) =>
             {

@@ -38,6 +38,9 @@ public class OfficeWorker : MonoBehaviour
     private float nextReceiveTime;  // keeps a stream of delivered papers from re-punching the desk every frame
 
 
+    private WaitForSeconds workWait;
+    private float workWaitInterval;
+
     private void Awake()
     {
         CacheVisualScale();
@@ -89,7 +92,6 @@ public class OfficeWorker : MonoBehaviour
 
         if (workCoroutine == null)
         {
-            Debug.Log("Start Working Again ");
             workCoroutine = StartCoroutine(Working());
         }
     }
@@ -99,7 +101,13 @@ public class OfficeWorker : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(UpgradeManager.Instance.GetWorkInterval(workInterval));
+            float interval = UpgradeManager.Instance.GetWorkInterval(workInterval);
+            if (workWait == null || interval != workWaitInterval)
+            {
+                workWait = new WaitForSeconds(interval); // only rebuilt when an upgrade changes the interval
+                workWaitInterval = interval;
+            }
+            yield return workWait;
 
             if(currentPaperAmount <= 0)
             {
