@@ -22693,7 +22693,7 @@ MonoBehaviour:
   spawnPoints:
   - {fileID: 291307262}
   - {fileID: 1517072899}
-  officeDataFileName: officeStates04.dat
+  officeDataFileName: office.dat
 --- !u!1 &1460372299
 GameObject:
   m_ObjectHideFlags: 0

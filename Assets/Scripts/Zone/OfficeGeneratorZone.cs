@@ -6,9 +6,8 @@ using TMPro;
 using DG.Tweening;
 
 /// <summary>
-/// The purchase zone of a locked workstation. Stepping on it buys the workstation in one go when the player can afford
-/// it (the price is deducted exactly once), otherwise the price just shakes and nothing is taken.
-/// moneyPaid is still saved by the factory; an old save with a partial payment is honoured as credit.
+/// The purchase zone of a locked workstation. Standing in it drains the player's coins into the price until it reaches 0 (partial payments are kept and saved by
+/// the factory), then the workstation builds.
 /// </summary>
 public class OfficeGeneratorZone : Zone
 {
@@ -18,6 +17,9 @@ public class OfficeGeneratorZone : Zone
     private Coroutine animatePurchase;
     private bool purchased;           // set the moment the money is taken: blocks any second purchase
     private float nextDeniedTime;
+    private Coroutine payCoroutine;
+    private const float PayTicks = 30f;   // pay-out steps for the whole price
+    private readonly WaitForSeconds payWait = new WaitForSeconds(0.03f);
 
     [Header("UI Elements")]
     public TextMeshProUGUI priceText;
@@ -45,6 +47,7 @@ public class OfficeGeneratorZone : Zone
         CurrencyManager.onUpdateCoins -= OnCoinsChanged;
         KillTweens();
         animatePurchase = null;
+        payCoroutine = null;
     }
 
     private void Start()
@@ -88,22 +91,42 @@ public class OfficeGeneratorZone : Zone
     public override void PerformAction(PlayerManager playerManager)
     {
         base.PerformAction(playerManager);
-        if (purchased) return;
+        if (purchased || payCoroutine != null) return;
 
-        int remaining = Remaining;
-        if (CurrencyManager.Instance.GetCoins() < remaining)
+        if (CurrencyManager.Instance.GetCoins() <= 0)
         {
             ShowDenied();
             return;
         }
+        payCoroutine = StartCoroutine(PayWhileStanding());
+    }
 
-        // Purchase: flag first, then take the money once. Nothing below can run twice.
+    /// <summary>
+    /// Coins drain into the price while the player stands here (about a second for the whole price), so the
+    /// remaining price falls as money is taken. Leaving keeps what was paid; stepping back in continues from there.
+    /// </summary>
+    private IEnumerator PayWhileStanding()
+    {
+        int chunk = Mathf.Max(1, Mathf.CeilToInt(officePrice / PayTicks));
+        while (Remaining > 0)
+        {
+            int coins = CurrencyManager.Instance.GetCoins();
+            if (coins > 0)
+            {
+                int pay = Mathf.Min(chunk, Remaining, coins);
+                CurrencyManager.Instance.UpdateCoins(-pay);
+                moneyPaid += pay;
+                priceText.text = MathHelper.FormatNumber(Remaining);
+                progressImage.fillAmount = officePrice > 0 ? (float)moneyPaid / officePrice : 1f;
+            }
+            yield return payWait;
+        }
+
+        // fully paid: flag it, then the bar/price finish and the workstation builds itself
         purchased = true;
-        if (remaining > 0) CurrencyManager.Instance.UpdateCoins(-remaining);
-        moneyPaid = officePrice;
-
+        payCoroutine = null;
         if (pulseTarget != null) { pulseTarget.DOKill(); pulseTarget.localScale = Vector3.one; }
-        animatePurchase = StartCoroutine(AnimatePurchase(remaining));
+        animatePurchase = StartCoroutine(AnimatePurchase(0));
     }
 
     private void ShowDenied()
@@ -142,6 +165,11 @@ public class OfficeGeneratorZone : Zone
     public override void StopAction()
     {
         base.StopAction();
-        // Leaving the zone never cancels a purchase that already took the money: the build still finishes.
+        // Leaving stops the draining; what was already paid stays paid (and is saved). Once fully paid the build still finishes.
+        if (payCoroutine != null)
+        {
+            StopCoroutine(payCoroutine);
+            payCoroutine = null;
+        }
     }
 }
