@@ -30,11 +30,15 @@ public class OfficeWorker : MonoBehaviour
     public event Action PaperReceived;          // idle -> receives papers
     public event Action<bool> WorkingChanged;   // true when the worker starts processing, false when out of papers
     public event Action PaperProcessed;         // one paper turned into value
-    public event Action<float> BuildStarted;    // purchase build-in began; arg = seconds until the desk impact
+    public event Action<float> BuildStarted;    // purchase build-in began; arg = seconds until the desk has finished appearing
+
+    /// <summary>No papers waiting and nothing being processed: the only state in which the worker may doze off.</summary>
+    public bool IsIdle => currentPaperAmount <= 0 && !isProcessing;
 
     private Vector3 visualBaseScale = Vector3.one;
     private bool visualBaseCached;
     private bool isProcessing;      // true from the first processed paper until the worker runs out of papers
+    private bool isBuilding;        // build-in running: work punches must not cut it short
     private float nextReceiveTime;  // keeps a stream of delivered papers from re-punching the desk every frame
 
 
@@ -133,7 +137,7 @@ public class OfficeWorker : MonoBehaviour
 
     private void Punch(float amount, float duration)
     {
-        if (workVisual == null || amount <= 0f) return;
+        if (workVisual == null || amount <= 0f || isBuilding) return;
         CacheVisualScale();
 
         workVisual.DOKill();
@@ -149,7 +153,7 @@ public class OfficeWorker : MonoBehaviour
     /// </summary>
     public void PlayBuildAnimation(Action onImpact)
     {
-        BuildStarted?.Invoke(buildFootprintTime + buildRiseTime * 0.55f);
+        BuildStarted?.Invoke(buildFootprintTime + buildRiseTime);   // the employee is revealed once the desk stands
         if (workVisual == null)
         {
             onImpact?.Invoke();
@@ -160,6 +164,7 @@ public class OfficeWorker : MonoBehaviour
         Vector3 b = visualBaseScale;
         workVisual.DOKill();
         workVisual.localScale = new Vector3(b.x * 0.3f, 0f, b.z * 0.3f);
+        isBuilding = true;   // papers delivered while the desk rises are still worked, they just do not punch the desk
 
         float impactTime = buildFootprintTime + buildRiseTime * 0.55f;
         DOTween.Sequence()
@@ -167,7 +172,11 @@ public class OfficeWorker : MonoBehaviour
             .Append(workVisual.DOScale(b, buildRiseTime).SetEase(Ease.OutBack, 2f))
             .InsertCallback(impactTime, () => onImpact?.Invoke())
             .SetTarget(workVisual)
-            .OnKill(() => { if (workVisual != null) workVisual.localScale = b; });
+            .OnKill(() =>
+            {
+                isBuilding = false;
+                if (workVisual != null) workVisual.localScale = b;
+            });
     }
 
     private void StopWorking()

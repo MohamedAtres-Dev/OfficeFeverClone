@@ -31,12 +31,8 @@ public class PlayerManager : MonoBehaviour
     [SerializeField] private float pickupPitchRange = 0.35f;
 
 
+    // Paper pickups use no particles on purpose: the flight, the pop and the rising pitch already read clearly.
     [Header("VFX")]
-    [Tooltip("Played where a paper lands on the carried stack (PaperPickupVFX).")]
-    [SerializeField] private PooledVFX paperPickupVFX;
-    [Tooltip("Metres above the landed paper's centre where the effect is played.")]
-    [SerializeField] private float pickupVFXHeightOffset = 0.05f;
-
     [Tooltip("Played above the player when money is credited (MoneyRewardVFX).")]
     [SerializeField] private PooledVFX moneyRewardVFX;
     [Tooltip("Metres above the player's pivot where the money effect plays.")]
@@ -345,9 +341,6 @@ public class PlayerManager : MonoBehaviour
 
                 PlacePaperInSlot(paperTransform, slotLocalPosition, slotLocalRotation);
                 PopPaper(paperTransform);
-                // follows the landed paper (which now rides on the hold point) so it never trails behind a moving player
-                Vector3 pickupVfxOffset = Vector3.up * pickupVFXHeightOffset;
-                VFXPool.Instance.Play(paperPickupVFX, paperTransform.position + pickupVfxOffset, paperTransform, pickupVfxOffset);
 
                 float fill = MaxPaperStack > 1 ? slot / (float)(MaxPaperStack - 1) : 0f;
                 AudioManager.Instance.PlaySFX(paperSound, 1f, 1f + pickupPitchRange * fill);
@@ -394,7 +387,7 @@ public class PlayerManager : MonoBehaviour
 
         // the paper may still be flying to the hold point; its arrival must not re-parent it to the player
         topPaper.transform.DOKill();
-        AudioManager.Instance.PlaySFX(paperSound);
+        AudioManager.Instance.PlaySFX(paperSound, 0.9f, UnityEngine.Random.Range(0.94f, 1.06f)); // slight variation: a stream of deliveries never sounds mechanical
         onPaperUnstack?.Invoke(topPaper);
     }
 }

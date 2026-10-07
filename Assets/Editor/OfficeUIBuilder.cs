@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Idempotent builder for the gameplay UI style: one rounded white "chip" language, navy bold text, green/red price states.
-/// Restyles the existing HUD objects in place (so HUDManager / PausePanel references stay valid) and adds the upgrade cards.
+/// Restyles the existing HUD objects in place (so HUDManager / PausePanel references stay valid).
 /// </summary>
 public static class OfficeUIBuilder
 {
@@ -19,7 +19,6 @@ public static class OfficeUIBuilder
     static readonly Color Panel = new Color(1f, 1f, 1f, 0.94f);
     static readonly Color Shadow = new Color32(0x1B, 0x2A, 0x45, 56);
     static readonly Color Blue = new Color32(0x4D, 0xA3, 0xFF, 255);
-    static readonly Color Orange = new Color32(0xFF, 0xA0, 0x2A, 255);
 
     static Sprite pill, card, circle, iconPaper, iconBolt;
 
@@ -278,9 +277,8 @@ public static class OfficeUIBuilder
             pbtn.colors = cb;
         }
 
-        // --- upgrade cards (priority 3)
-        BuildUpgradeCard(root, "Upgrade_Capacity", UpgradeManager.UpgradeType.Capacity, "CARRY +10", iconPaper, Blue, 3, new Vector2(36, -176), 2);
-        BuildUpgradeCard(root, "Upgrade_Speed", UpgradeManager.UpgradeType.WorkerSpeed, "SPEED", iconBolt, Orange, 3, new Vector2(36, -296), 2);
+        // --- upgrades live in the world now (UpgradePadZone stations, see OfficeFinalPolishBuilder): no HUD cards
+        foreach (var n in new[] { "Upgrade_Capacity", "Upgrade_Speed" }) Clear(root, n);
 
         // old empty bars are no longer needed
         foreach (var n in new[] { "TopBar - Rect", "LeftBar - Rect" })
@@ -297,66 +295,11 @@ public static class OfficeUIBuilder
 
         StylePausePanel(root);
 
-        // cards must sit above the full-screen joystick hitbox
-        foreach (var n in new[] { "CapacityChip", "Upgrade_Capacity", "Upgrade_Speed" })
+        // the chip must sit above the full-screen joystick hitbox
+        foreach (var n in new[] { "CapacityChip" })
             root.Find(n).SetAsLastSibling();
         // keep the pause panel on top of everything
         var pp = root.Find("PausePanel"); if (pp != null) pp.SetAsLastSibling();
-    }
-
-    static void BuildUpgradeCard(Transform root, string name, UpgradeManager.UpgradeType type, string title, Sprite icon, Color accent, int pipCount, Vector2 pos, int levels)
-    {
-        var old = root.Find(name); if (old != null) Object.DestroyImmediate(old.gameObject);
-        var cardRt = Rect(root, name);
-        Anchor(cardRt, new Vector2(0, 1), new Vector2(0, 1), pos, new Vector2(412, 104));
-        var body = ChipContainer(cardRt, card, true, Panel, true);
-
-        var iconBg = Rect(cardRt, "IconBg"); Anchor(iconBg, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(76, 76));
-        Img(iconBg, circle, accent, false);
-        var ic = Rect(iconBg, "Icon"); Anchor(ic, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(54, 54));
-        Img(ic, icon, Color.white, false);
-
-        var titleRt = Rect(cardRt, "Title"); Anchor(titleRt, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(104, 16), new Vector2(160, 36));
-        var titleTxt = Txt(titleRt, title, 24, Navy, TextAlignmentOptions.MidlineLeft);
-
-        var pips = new List<Image>();
-        for (int i = 0; i < levels; i++)
-        {
-            var p = Rect(cardRt, "Pip" + i);
-            Anchor(p, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(112 + i * 30, -22), new Vector2(22, 22));
-            pips.Add(Img(p, circle, new Color32(0xCC, 0xD3, 0xE0, 255), false));
-        }
-
-        var cost = Rect(cardRt, "Cost"); Anchor(cost, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-18, 0), new Vector2(76, 64));
-        var costTxt = Txt(cost, "100", 36, Navy, TextAlignmentOptions.MidlineRight);
-        var coin = Rect(cardRt, "CoinIcon"); Anchor(coin, new Vector2(1, 0.5f), new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(0, 0));
-        Img(coin, AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/money1.png"), Color.white, false);
-        coin.sizeDelta = new Vector2(40, 40);
-        coin.anchoredPosition = new Vector2(-92, 0);
-        // cost text sits to the right of the coin
-        cost.anchoredPosition = new Vector2(-18, 0);
-
-        var btn = cardRt.gameObject.AddComponent<Button>();
-        btn.targetGraphic = body;
-        btn.transition = Selectable.Transition.ColorTint;
-        var cb = btn.colors; cb.normalColor = Color.white; cb.highlightedColor = Color.white; cb.pressedColor = new Color(0.82f, 0.86f, 0.92f, 1f);
-        cb.selectedColor = Color.white; cb.disabledColor = Color.white; btn.colors = cb;
-        var nav = btn.navigation; nav.mode = Navigation.Mode.None; btn.navigation = nav;
-
-        var group = cardRt.gameObject.AddComponent<CanvasGroup>();
-        var ui = cardRt.gameObject.AddComponent<UpgradeButtonUI>();
-        var so = new SerializedObject(ui);
-        so.FindProperty("type").enumValueIndex = (int)type;
-        so.FindProperty("button").objectReferenceValue = btn;
-        so.FindProperty("root").objectReferenceValue = cardRt;
-        so.FindProperty("group").objectReferenceValue = group;
-        so.FindProperty("titleText").objectReferenceValue = titleTxt;
-        so.FindProperty("costText").objectReferenceValue = costTxt;
-        so.FindProperty("coinIcon").objectReferenceValue = coin.GetComponent<Image>();
-        so.FindProperty("iconBackground").objectReferenceValue = iconBg.GetComponent<Image>();
-        var pipsProp = so.FindProperty("pips"); pipsProp.arraySize = pips.Count;
-        for (int i = 0; i < pips.Count; i++) pipsProp.GetArrayElementAtIndex(i).objectReferenceValue = pips[i];
-        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     static void StylePausePanel(Transform root)

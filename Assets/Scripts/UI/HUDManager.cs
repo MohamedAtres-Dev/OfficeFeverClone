@@ -13,6 +13,7 @@ public class HUDManager : Singlton<HUDManager>
     private float animateCoinsTime = 0.18f;
     private Tween coinCountTween;
     private int animatedCoinsValue = 0;
+    [SerializeField] private Color spendColor = new Color(1f, 0.62f, 0.58f, 1f);
 
     public GameObject joyStickObject;
 
@@ -33,7 +34,7 @@ public class HUDManager : Singlton<HUDManager>
     {
         CurrencyManager.onUpdateCoins -= UpdateCoinsUI;
         coinCountTween?.Kill();
-        if (coinsTxt != null) coinsTxt.transform.DOKill(true);
+        if (coinsTxt != null) { coinsTxt.transform.DOKill(true); coinsTxt.DOKill(); coinsTxt.color = Color.white; }
     }
 
 
@@ -43,8 +44,13 @@ public class HUDManager : Singlton<HUDManager>
     /// </summary>
     private void UpdateCoinsUI(int value)
     {
+        // gaining pops the number up; spending squeezes it and flashes it soft red, so the two read differently
+        bool spent = value < animatedCoinsValue;
         coinsTxt.transform.DOKill(true); // finish the previous pop so the scale is back at 1 before the next one
-        coinsTxt.transform.DOScale(1.15f, 0.08f).SetLoops(2, LoopType.Yoyo).SetTarget(coinsTxt.transform);
+        coinsTxt.transform.DOScale(spent ? 0.9f : 1.15f, 0.08f).SetLoops(2, LoopType.Yoyo).SetTarget(coinsTxt.transform);
+        coinsTxt.DOKill();
+        coinsTxt.color = spent ? spendColor : Color.white;
+        if (spent) coinsTxt.DOColor(Color.white, 0.3f).SetDelay(0.08f).SetTarget(coinsTxt);
 
         coinCountTween?.Kill();
         coinCountTween = DOTween.To(() => animatedCoinsValue, x =>

@@ -19,6 +19,11 @@ public class PaperCollectZone : Zone
     private Coroutine collectPaper;
     private Coroutine spawnPapers;
 
+    /// <summary>Presentation hook: a new paper was added to the pile (drives the PaperMachine animation).</summary>
+    public event System.Action PaperSpawned;
+    /// <summary>True while the pile is at its cap and nothing is being produced.</summary>
+    public bool IsFull => paperStack.Count >= maxGeneratedPapers;
+
 
     // Awake (not Start) so the tower counters exist before the first paper can be spawned.
     private void Awake()
@@ -81,6 +86,7 @@ public class PaperCollectZone : Zone
                     newPaper.transform.SetParent(transform);
                     paperStack.Push(newPaper);
                     currentTowerPapers[towerIndex]++; // increment the number of papers in the current tower
+                    PaperSpawned?.Invoke();
                 }
             }
             // Wait for the spawn interval before spawning the next paper

@@ -19,9 +19,14 @@ public class Office : MonoBehaviour
     [SerializeField] private PooledVFX unlockVFX;
     [Tooltip("Where the unlock effect is centred, relative to the worker (the desk).")]
     [SerializeField] private Vector3 unlockVFXOffset = new Vector3(0f, 0.5f, 0f);
+    [Tooltip("Small confetti burst layered on the unlock effect (ConfettiVFX).")]
+    [SerializeField] private PooledVFX confettiVFX;
+    [SerializeField] private Vector3 confettiOffset = new Vector3(0f, 1.1f, 0f);
     [Header("Build Sound")]
     [SerializeField] private AudioClip buildSound;
     [SerializeField] private AudioClip buildCompleteSound;
+    [Tooltip("Short chime on the build impact: the strongest moment of the game.")]
+    [SerializeField] private AudioClip celebrateSound;
 
     private OfficeState currentState;
     private bool isRestoringPapers;
@@ -44,8 +49,15 @@ public class Office : MonoBehaviour
 
     private void PlayBuildImpact()
     {
+        Vector3 desk = officeWorker.transform.position;
         AudioManager.Instance.PlaySFX(buildCompleteSound, 1f, 1.25f);
-        VFXPool.Instance.Play(unlockVFX, officeWorker.transform.position + unlockVFXOffset);
+        AudioManager.Instance.PlaySFX(celebrateSound, 0.85f, 1f);
+        VFXPool.Instance.Play(unlockVFX, desk + unlockVFXOffset);
+        VFXPool.Instance.Play(confettiVFX, desk + confettiOffset);
+
+        // a very small zoom punch: the camera keeps following, so player control is never interrupted
+        var follow = Camera.main != null ? Camera.main.GetComponent<CameraFollow>() : null;
+        if (follow != null) follow.Punch();
     }
 
     public int GetMoneyGeneratedCount()

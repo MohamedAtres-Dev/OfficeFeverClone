@@ -49,6 +49,8 @@ public static class OfficeEnvironmentBuilder
         LayoutGameplayObjects();
         AddWorkersToOfficePrefab(seatOrange);
         SetupLighting();
+        // the final pass (doorway, upgrade room, machines, sleep bubbles) sits on top of this layout
+        OfficeFinalPolishBuilder.Build();
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("Office environment built.");

@@ -275,8 +275,11 @@ MonoBehaviour:
   officeGenerator: {fileID: 2455313286137671694}
   unlockVFX: {fileID: 4074916135088290304, guid: 6bbbc3b5e3ad20e4692deb03f60308e8, type: 3}
   unlockVFXOffset: {x: 0, y: 0.5, z: 0}
+  confettiVFX: {fileID: 4932066552395657788, guid: 7313efadf1e463d40b2667d7743d1486, type: 3}
+  confettiOffset: {x: 0, y: 1.1, z: 0}
   buildSound: {fileID: 8300000, guid: ed972a2811bc4d44da2152edc7ce9240, type: 3}
   buildCompleteSound: {fileID: 8300000, guid: 381526ebc3a8764468f3c4f7cbcee5f0, type: 3}
+  celebrateSound: {fileID: 8300000, guid: b6d624b8ce62c364b9be27c683067a63, type: 3}
 --- !u!1 &2455313286137671688
 GameObject:
   m_ObjectHideFlags: 0
@@ -609,8 +612,6 @@ MonoBehaviour:
   paperPrefab: {fileID: 173662686794936808, guid: 621a4107b4591ed42afa6a6f632c7c5c, type: 3}
   paperStackSpacing: 0.02
   currentOffice: {fileID: 2894692949016700728}
-  paperDeliveryVFX: {fileID: 4540735834257481706, guid: 9fc92efd8a720e447aac83a1fc9172dd, type: 3}
-  deliveryVFXInterval: 0.2
   deliveryFlightTime: 0.3
   deliveryArcHeight: 0.35
 --- !u!1 &2729856868060396778

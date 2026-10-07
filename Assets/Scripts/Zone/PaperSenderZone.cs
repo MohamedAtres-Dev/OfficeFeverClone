@@ -18,14 +18,6 @@ public class PaperSenderZone : Zone
 
     public Office currentOffice;
 
-    [Header("VFX")]
-    [Tooltip("Played where a delivered paper lands on the desk (PaperDeliveryVFX).")]
-    [SerializeField] private PooledVFX paperDeliveryVFX;
-    [Tooltip("Minimum seconds between delivery effects on this desk.")]
-    [SerializeField] private float deliveryVFXInterval = 0.2f;
-
-    private float nextDeliveryVFXTime;
-
 
     private void OnEnable()
     {
@@ -134,14 +126,7 @@ public class PaperSenderZone : Zone
                 t.rotation = Quaternion.identity;
                 t.position = GetDeskSlot(paperStack.Count);
                 paperStack.Push(paper);
-
-                // papers land every ~50 ms while delivering, so only the first of each burst plays the effect
-                if (Time.time >= nextDeliveryVFXTime)
-                {
-                    nextDeliveryVFXTime = Time.time + deliveryVFXInterval;
-                    VFXPool.Instance.Play(paperDeliveryVFX, t.position);
-                }
-                currentOffice.OnGetPaper();
+                currentOffice.OnGetPaper(); // the landing itself is the feedback: no particles on routine deliveries
             })
             .OnKill(() => papersLanded++); // runs on completion and when the paper is pulled away mid-flight
     }

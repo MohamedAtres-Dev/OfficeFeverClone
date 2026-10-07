@@ -26,7 +26,8 @@ public class Singlton<T> : MonoBehaviour where T : MonoBehaviour
 
     protected virtual void Awake()
     {
-        if (instance == null)
+        // instance == this when Instance was read before this Awake ran: that is the same object, not a duplicate
+        if (instance == null || instance == this)
         {
             instance = this as T;
             DontDestroyOnLoad(gameObject);
